@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>矩阵的主序 - Luxaviar&#39;s Blog</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="luxaviar" /><meta name="description" content="有两个独立的概念涉及到行主序和列主序，分别是表示（标记）和存储。当你拿起纸和笔做数学题的时候，你头脑中浮现的矩阵有一个表示上的惯例。当你实现" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.87.0-DEV with theme even" />
+
+
+<link rel="canonical" href="https://luxaviar.github.io/post/20211024-%E7%9F%A9%E9%98%B5%E7%9A%84%E4%B8%BB%E5%BA%8F/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<link href="/sass/main.min.f92fd13721ddf72129410fd8250e73152cc6f2438082b6c0208dc24ee7c13fc4.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="矩阵的主序" />
+<meta property="og:description" content="有两个独立的概念涉及到行主序和列主序，分别是表示（标记）和存储。当你拿起纸和笔做数学题的时候，你头脑中浮现的矩阵有一个表示上的惯例。当你实现" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://luxaviar.github.io/post/20211024-%E7%9F%A9%E9%98%B5%E7%9A%84%E4%B8%BB%E5%BA%8F/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2021-10-24T17:52:17+08:00" />
+<meta property="article:modified_time" content="2021-10-24T17:52:17+08:00" />
+
+<meta itemprop="name" content="矩阵的主序">
+<meta itemprop="description" content="有两个独立的概念涉及到行主序和列主序，分别是表示（标记）和存储。当你拿起纸和笔做数学题的时候，你头脑中浮现的矩阵有一个表示上的惯例。当你实现"><meta itemprop="datePublished" content="2021-10-24T17:52:17+08:00" />
+<meta itemprop="dateModified" content="2021-10-24T17:52:17+08:00" />
+<meta itemprop="wordCount" content="3329">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="矩阵的主序"/>
+<meta name="twitter:description" content="有两个独立的概念涉及到行主序和列主序，分别是表示（标记）和存储。当你拿起纸和笔做数学题的时候，你头脑中浮现的矩阵有一个表示上的惯例。当你实现"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">luxaviar的网络日志</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">归档</li>
+      </a><a href="/tags/">
+        <li class="mobile-menu-item">标签</li>
+      </a><a href="/categories/">
+        <li class="mobile-menu-item">分类</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">luxaviar的网络日志</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">归档</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/tags/">标签</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/categories/">分类</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">矩阵的主序</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2021-10-24 </span>
+        <div class="post-category">
+            <a href="/categories/Math/"> Math </a>
+            <a href="/categories/Programming/"> Programming </a>
+            </div>
+        <span id="busuanzi_container_page_pv" class="more-meta"> <span id="busuanzi_value_page_pv"><img src="/img/spinner.svg" alt="spinner.svg"/></span> times read </span>
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#存储">存储</a></li>
+    <li><a href="#表示约定">表示约定</a></li>
+    <li><a href="#左乘和右乘">左乘和右乘</a>
+      <ul>
+        <li><a href="#行向量列向量">行向量&amp;列向量</a></li>
+        <li><a href="#转置">转置</a></li>
+      </ul>
+    </li>
+    <li><a href="#通用矩阵库">通用矩阵库</a></li>
+    <li><a href="#d3d的惯例">D3D的惯例</a></li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <p>有两个独立的概念涉及到行主序和列主序，分别是表示（标记）和存储。当你拿起纸和笔做数学题的时候，你头脑中浮现的矩阵有一个表示上的惯例。当你实现一个矩阵库的时候，存储的问题冒出来了。理解上的混乱都来自于这两个概念的混淆。</p>
+<h1 id="存储">存储</h1>
+<p>首先，不论何种情况，矩阵在计算机中总是以一维数组的形式存储，区别在于：</p>
+<ul>
+<li>行主序: 按行优先存储，按照第1行、第2行、第n行的顺序，把元素存放在线性内存地址。</li>
+<li>列主序: 按列优先存储，按照第1列、第2列、第n列的顺序，把元素存放在线性内存地址。</li>
+</ul>
+<p><code>OpenGL</code>使用列主序。D3D的情况有些特别，<code>DirectXMath</code>使用行主序（CPU端），但<code>HLSL</code>默认使用列主序（GPU端）。</p>
+<h1 id="表示约定">表示约定</h1>
+<p>此处的主序和存储的主序毫无关联，只是表示形式的审美问题。</p>
+<p>区分行主序和列主序的方法是，考察基向量如何书写，如果是垂直书写，那么是列主序，否则是行主序。假设基向量为<span class="math inline">\(i,j,k\)</span>，<span class="math inline">\(T\)</span>表示位移向量，则行主序矩阵表示为：</p>
+<p><span class="math display">\[\begin{bmatrix}
+i_{x} & i_{y} & i_{z} & 0 \\
+j_{x} & j_{y} & j_{z} & 0 \\
+k_{x} & k_{y} & k_{z} & 0 \\
+T_x & T_y & T_z & 1
+\end{bmatrix}
+\]</span></p>
+<p>列主序矩阵表示为：</p>
+<p><span class="math display">\[\begin{bmatrix}
+i_{x} & j_{x} & k_{x} & T_x \\
+i_{y} & j_{y} & k_{y} & T_y \\
+i_{z} & j_{z} & k_{z} & T_z \\
+0 & 0 & 0 & 1
+\end{bmatrix}
+\]</span></p>
+<p>另外还有行优先和列优先的说法。</p>
+<ul>
+<li>行优先: 使用<code>M[row][col]</code>标记一个元素，即优先指定行，然后指定列。<code>DirectXMath</code>以及<code>HLSL</code>对矩阵采用行优先的标记方式，比如<code>float4x2</code>表示4行2列的矩阵。</li>
+<li>列优先: 使用<code>M[col][row]</code>标记一个元素，即优先指定列，然后指定行。<code>OpenGL</code>对矩阵采用列优先的标记方式，<code>mat4x2</code>是4列2行的矩阵。</li>
+</ul>
+<p>存储/表示/优先的主序都是独立的，以<code>Unity</code>为例，其矩阵内部是列主序，表示上也是列主序，但代码<code>M[row,colum]</code>却给人行优先的暗示。</p>
+<p>理论上，不同的矩阵实现可以有不同的存储和表示主序，以及行/列优先。作为用户，只要按照代码库的约定写代码即可，如有必要，底层实现会自动处理转置问题。除此以外，确实有一个需要我们关注的问题：乘法顺序。</p>
+<h1 id="左乘和右乘">左乘和右乘</h1>
+<p>让我们先从数学的角度考察矩阵乘法，对于<span class="math inline">\(A \times B=C\)</span>，数学上的约定是：<span class="math inline">\(A\)</span>的行和<span class="math inline">\(B\)</span>的列进行点积得到<span class="math inline">\(C\)</span>的元素，<span class="math inline">\(A\)</span>的行数和<span class="math inline">\(B\)</span>的列数必须一致。这个约定和<span class="math inline">\(A\)</span>以及<span class="math inline">\(B\)</span>是什么存储主序毫无关系，但它确实影响了向量的约定，进而给矩阵带来了表示上的区别。</p>
+<h2 id="行向量列向量">行向量&amp;列向量</h2>
+<p>因为矩阵相乘不满足交换律，因此把n维向量<span class="math inline">\(v\)</span>看做一个<span class="math inline">\(1 \times n\)</span>的矩阵（<code>行向量</code>）还是<span class="math inline">\(n \times 1\)</span>的矩阵（<code>列向量</code>），会直接影响矩阵和向量相乘的方式和结果（虽然行/列存储主序下向量的内存布局是完全一样的）。一旦把向量规定为行向量或列向量，向量和矩阵乘法的形式就固定下来了，如你所料有两种形式：</p>
+<ul>
+<li><strong>预乘(pre-multiplication)或者左乘</strong>：<span class="math inline">\(vM\)</span>，把向量看做是行向量，此时向量在左，矩阵在右。<code>HLSL</code>采用预乘。</li>
+<li><strong>后乘(post-multiplication)或者右乘</strong>：<span class="math inline">\(Mv\)</span>，把向量看做是列向量，此时矩阵在左，向量在右。<code>GLSL</code>采用后乘。</li>
+</ul>
+<p>数学教材一般采用后乘，此时向量被看做<span class="math inline">\(n \times 1\)</span>的矩阵，而矩阵<span class="math inline">\(M\)</span>就对应（表示上的）列主序矩阵，<span class="math inline">\(Mv\)</span>的结果还是一个列向量。而对于预乘，向量被看成<span class="math inline">\(1 \times n\)</span>的矩阵，<span class="math inline">\(vM\)</span>的结果还是一个行向量。不管怎样，都符合对向量做一个线性变换得到一个新向量的直观解释。</p>
+<p><strong>常见的误解是：</strong></p>
+<ol>
+<li>因为<code>OpenGL</code>是列主序并使用列向量，而<code>DirectXMath</code>是行主序并使用行向量，所以存储顺序必须与解释向量的规定相匹配。事实完全不是这样，这是人为约定的结果。</li>
+<li>矩阵和向量的乘法顺序取决于行主序还是列主序。乘法顺序和主序无关，不论采用什么主序，矩阵乘法总是以相同的方式相乘（行和列的点积），而矩阵和向量相乘的含义取决于你如何解释向量类型，而不是哪种存储主序。</li>
+</ol>
+<p>左乘和右乘从性能的角度考虑有一些微妙的地方，因为算术表达式按照从左到右顺序执行，预乘的性能要好一些。比如对向量做两次线性变换，预乘是：<span class="math inline">\(v \times A \times B=C\)</span>，向量<span class="math inline">\(v\)</span>和矩阵<span class="math inline">\(A\)</span>得到的中间结果是向量，合计2次向量和矩阵乘法；而后乘形式：<span class="math inline">\(B \times A \times v=C\)</span>（此处不考虑结果的一致性），合计1次矩阵相乘+1次向量和矩阵乘法。不过这也不是什么大问题，用括号调整优先级可以避免这个劣势（为了结果正确，往往也是必须的）：<span class="math inline">\(B \times (A \times v)=C\)</span>。</p>
+<p>虽然本质上两种乘法形式在效果上都是对向量进行一次线性变换，但我们知道矩阵交换律是不成立的，为了保证结果一致，我们必须对其中某一矩阵进行转置。</p>
+<h2 id="转置">转置</h2>
+<p>当转置和存储主序结合到一起的时候，有一个有趣的结论：<strong>转置矩阵</strong>改变主序之后的内存布局恰好和原矩阵的内存布局一致。换句话说，假设原矩阵为行主序存储，在以列主序存储解释的接口看来，它对应的内存布局恰好就是原矩阵的转置矩阵，中间不需要转置操作。</p>
+<p>以一个<span class="math inline">\(2 \times 3\)</span>矩阵为例:</p>
+<p><span class="math display">\[\begin{bmatrix}
+1 & 0 & -1\\
+2 & -3 & 1\\
+\end{bmatrix}
+\]</span></p>
+<p>它在行主序存储下的内存表示为:<code>1 0 -1 2 -3 1</code>，它的转置矩阵为：</p>
+<p><span class="math display">\[\begin{bmatrix}
+1 & 2 & \\
+0 & -3 & \\
+-1 & 1 & \\
+\end{bmatrix}
+\]</span></p>
+<p>它在列主序下的内存表示是：<code>1 0 -1 2 -3 1</code>，恰好和原矩阵在行主序存储的结果一致。</p>
+<p>这个结论和矩阵乘法联系到一起，又会得出一个有点违反直觉的结论。</p>
+<p>假设<span class="math inline">\(A_r\)</span>和<span class="math inline">\(B_r\)</span>为行主序的矩阵，而<span class="math inline">\(A_c^T\)</span>和<span class="math inline">\(B_c^T\)</span>分别是列主序下<span class="math inline">\(A_r\)</span>和<span class="math inline">\(B_r\)</span>的转置。根据前面的结论，<span class="math inline">\(A_r\)</span>和<span class="math inline">\(A_c^T\)</span>，<span class="math inline">\(B_r\)</span>和<span class="math inline">\(B_c^T\)</span>的内存表示完全一致，更进一步，在行主序视角下的乘积<span class="math inline">\(A_r \times B_r\)</span>，等价于列主序视角下的乘积<span class="math inline">\(B_c^T \times A_c^T\)</span>（注意，为了满足矩阵乘法的合法性——行和列数量相等，后者的乘法顺序要对调一下）。</p>
+<p>由此，我们可以得到一个结论：对于使用行主序存储的矩阵，可以不经转置直接传递到列主序存储的API中，同时保证矩阵乘法的正确性，反之亦然。前提是向量和矩阵的乘法形式，也符合不同主序表示下的惯例形式，即，列主序：<span class="math inline">\(矩阵 \times 列向量\)</span>，行主序：<span class="math inline">\(行向量 \times 矩阵\)</span>。</p>
+<h1 id="通用矩阵库">通用矩阵库</h1>
+<p>那么，进行同样的矩阵乘法运算，<code>D3D</code>和<code>OpenGL</code>之间传递矩阵数据时，是否要对矩阵进行一次转置呢？</p>
+<p>答案是不用。前面说过，相同的内存表示，它们互为转置。这就是神奇的地方，虽然矩阵主序不一样，<strong>乘法的顺序不一样</strong>，但是在保证结果一致且正确的情况下，矩阵在内存的布局却是一样的。</p>
+<p>这个特性的一个好处是，你可以写一个通用的矩阵类，同时适配<code>D3D</code>和<code>OpenGL</code>，只要你遵循列向量和后乘，或者行向量和预乘的规则，矩阵的内存表示是完全兼容两边的。</p>
+<h1 id="d3d的惯例">D3D的惯例</h1>
+<p><code>D3D11</code>官方示例代码中，为何传递矩阵到shader前会有一个转置的操作？</p>
+<p>如前所说，<code>DirectXMath</code>使用行主序的存储（CPU端），但<code>HLSL</code>默认对存储使用列主序的解释（GPU端）。有两种方式弥合这种不一致：</p>
+<ol>
+<li><code>C++</code>代码端进行转置，<code>HLSL</code>中使用<code>matrix</code>(默认列主序矩阵) ，<code>mul</code>函数的形式为：<span class="math inline">\(行向量 \times 矩阵\)</span>。这是官方例程所使用的方式，好处是矩阵的一列数据可以直接放到一个寄存器上，直接用dp4指令（省掉一个转置指令的开销）。</li>
+<li><code>C++</code>代码端不进行转置，HLSL中使用<code>matrix</code>，<code>mul</code>函数的形式为：<span class="math inline">\(矩阵 \times 列向量\)</span>。<code>OpenGL</code>就是这样的惯例，问题在于和很多遗留的<code>HLSL</code>代码不一致，不能和遗留代码配合。</li>
+</ol>
+<p>用代码表示实际发生的各种情况如下：</p>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-glsl" data-lang="glsl"><span class="n">mul</span><span class="p">(</span><span class="n">row</span> <span class="n">float4</span><span class="p">,</span> <span class="n">row_major</span> <span class="n">matrix</span><span class="p">)</span> <span class="c1">//HLSL会自动转置矩阵然后取列向量到寄存器，有性能损失</span>
+<span class="n">mul</span><span class="p">(</span><span class="n">row_major</span> <span class="n">matrix</span><span class="p">,</span> <span class="n">column</span> <span class="n">float4</span><span class="p">)</span> <span class="c1">//HLSL不需要自动转置，没有性能损失，但是注意结果和上面不一致</span>
+
+<span class="n">mul</span><span class="p">(</span><span class="n">row</span> <span class="n">float4</span><span class="p">,</span> <span class="n">matrix</span><span class="p">)</span> <span class="c1">//HLSL不需要自动转置，但为了保证结果是正确的，C++需要转置，这是官方做法</span>
+<span class="n">mul</span><span class="p">(</span><span class="n">matrix</span><span class="p">,</span> <span class="n">column</span> <span class="n">float4</span><span class="p">)</span> <span class="c1">//为了和上面结果一致，C++可以不转置</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>另外，在<code>HLSL</code>中行主矩阵和列主矩阵的区别只影响从着色器输入中加载矩阵时的解释顺序。加载成<code>HLSL</code>矩阵变量后，矩阵顺序不会影响数据在着色器代码中的使用或访问方式。行主和列主的封装顺序对构造函数的封装顺序也没有影响 (始终遵循行优先) 。</p>
+<p>参考：</p>
+<ol>
+<li><a href="https://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/geometry/row-major-vs-column-major-vector" target="_blank" rel="noopener">Row Major vs Column Major Vector</a> </li>
+<li><a href="https://fgiesen.wordpress.com/2012/02/12/row-major-vs-column-major-row-vectors-vs-column-vectors/" target="_blank" rel="noopener">Row major vs. column major, row vectors vs. column vectors</a> </li>
+</ol>
+
+    </div>
+
+    <div class="post-copyright">
+  <p class="copyright-item">
+    <span class="item-title">Author</span>
+    <span class="item-content">luxaviar</span>
+  </p>
+  <p class="copyright-item">
+    <span class="item-title">LastMod</span>
+    <span class="item-content">
+        2021-10-24
+        
+    </span>
+  </p>
+  
+  <p class="copyright-item">
+    <span class="item-title">License</span>
+    <span class="item-content"><a rel="license noopener" href="https://creativecommons.org/licenses/by-nc/4.0/deed.en" target="_blank">知识共享署名-非商业性使用 4.0 国际许可协议</a></span>
+  </p>
+</div>
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        
+        
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+      <a href="https://github.com/luxaviar" class="iconfont icon-github" title="github"></a>
+  <a href="https://luxaviar.github.io/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  <div class="busuanzi-footer">
+    <span id="busuanzi_container_site_pv"> site pv: <span id="busuanzi_value_site_pv"><img src="/img/spinner.svg" alt="spinner.svg"/></span> </span>
+      <span class="division">|</span>
+    <span id="busuanzi_container_site_uv"> site uv: <span id="busuanzi_value_site_uv"><img src="/img/spinner.svg" alt="spinner.svg"/></span> </span>
+  </div>
+
+  <span class="copyright-year">
+    &copy; 
+    2020 - 
+    2021<span class="heart"><i class="iconfont icon-heart"></i></span><span>luxaviar</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script>
+
+
+
+<script type="text/javascript" src="/js/main.min.c99b103c33d1539acf3025e1913697534542c4a5aa5af0ccc20475ed2863603b.js"></script>
+  <script type="text/javascript">
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$','$'], ['\\(','\\)']],
+        }
+    };
+  </script>
+  <script async src="https://cdn.jsdelivr.net/npm/mathjax@3.0.5/es5/tex-mml-chtml.js" integrity="sha256-HGLuEfFcsUJGhvB8cQ8nr0gai9EucOOaIxFw7qxmd+w=" crossorigin="anonymous"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>
