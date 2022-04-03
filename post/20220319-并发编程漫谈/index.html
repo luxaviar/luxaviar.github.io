@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
 
 
-<meta name="author" content="luxaviar" /><meta name="description" content="基础知识 处理器架构演进 Cache 现代处理器的时钟周期通常为0.5 ns，而访问主存的时间为50ns 或更长。因此，访问内存是非常昂贵的，超过100个时钟" />
+<meta name="author" content="luxaviar" /><meta name="description" content="基础知识 处理器架构演进 Cache 现代处理器的时钟周期通常为0.5 ns，而访问主存的时间为50ns 或更长。因此，访问内存是非常昂贵的，超过100个时钟" /><meta name="keywords" content="Concurrency, Memory Model" />
 
 
 
@@ -49,8 +49,8 @@
 <meta itemprop="name" content="并发编程漫谈">
 <meta itemprop="description" content="基础知识 处理器架构演进 Cache 现代处理器的时钟周期通常为0.5 ns，而访问主存的时间为50ns 或更长。因此，访问内存是非常昂贵的，超过100个时钟"><meta itemprop="datePublished" content="2022-03-19T19:49:01+08:00" />
 <meta itemprop="dateModified" content="2022-03-19T19:49:01+08:00" />
-<meta itemprop="wordCount" content="17376">
-<meta itemprop="keywords" content="C/C&#43;&#43;,Concurrent," /><meta name="twitter:card" content="summary"/>
+<meta itemprop="wordCount" content="17375">
+<meta itemprop="keywords" content="C/C&#43;&#43;,Concurrency," /><meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="并发编程漫谈"/>
 <meta name="twitter:description" content="基础知识 处理器架构演进 Cache 现代处理器的时钟周期通常为0.5 ns，而访问主存的时间为50ns 或更长。因此，访问内存是非常昂贵的，超过100个时钟"/>
 
@@ -191,7 +191,7 @@
         <li><a href="#data-race-free">Data Race Free</a></li>
         <li><a href="#c11内存模型">C++11内存模型</a>
           <ul>
-            <li><a href="#sequential-consisten-ordering">sequential consisten ordering</a></li>
+            <li><a href="#sequential-consistent-ordering">sequential consistent ordering</a></li>
             <li><a href="#relaxed-ordering">relaxed ordering</a></li>
             <li><a href="#acquire-release-ordering">acquire-release ordering</a></li>
             <li><a href="#memory_order_consume">memory_order_consume</a></li>
@@ -673,8 +673,8 @@ Requirement R2: Memory requests from all processors issued to an individual memo
 <li>Relaxed Ordering（<code>memory_order_relaxed</code>)。</li>
 <li>Acquire-Release Ordering（<code>memory_order_consume</code>，<code>memory_order_acquire</code>，<code>memory_order_release</code>，<code>memory_order_acq_rel</code>）</li>
 </ul>
-<p>*C++11还定义了原子栅栏作为原子变量的替代，但是并不太常用，也很容易用错。</p>
-<h3 id="sequential-consisten-ordering">sequential consisten ordering</h3>
+<p><em>C++11还定义了原子栅栏作为原子变量的替代，但是并不太常用，也很容易用错。</em></p>
+<h3 id="sequential-consistent-ordering">sequential consistent ordering</h3>
 <p>对应<code>memory_order_seq_cst</code>：</p>
 <ul>
 <li>如果对于一个原子变量的操作都是顺序一致的，那么多线程程序的行为就像是这些操作都以一种交叉顺序被单线程程序执行。</li>
@@ -829,10 +829,14 @@ Requirement R2: Memory requests from all processors issued to an individual memo
 <footer class="post-footer">
       <div class="post-tags">
           <a href="/tags/C/C&#43;&#43;/">C/C&#43;&#43;</a>
-          <a href="/tags/Concurrent/">Concurrent</a>
+          <a href="/tags/Concurrency/">Concurrency</a>
           </div>
       <nav class="post-nav">
-        
+        <a class="prev" href="/post/20220423-%E5%88%9A%E4%BD%93%E7%89%A9%E7%90%86%E5%BC%95%E6%93%8E%E5%AE%9E%E7%8E%B0%E4%B9%8B%E7%A2%B0%E6%92%9E%E6%A3%80%E6%B5%8B/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">刚体物理引擎实现之碰撞检测</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
         <a class="next" href="/post/20211024-%E7%9F%A9%E9%98%B5%E7%9A%84%E4%B8%BB%E5%BA%8F/">
             <span class="next-text nav-default">矩阵的主序</span>
             <span class="next-text nav-mobile">Next</span>

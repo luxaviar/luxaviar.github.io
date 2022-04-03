@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Physics on Luxaviar&#39;s Blog</title>
+    <link>https://luxaviar.github.io/categories/Physics/</link>
+    <description>Recent content in Physics on Luxaviar&#39;s Blog</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <lastBuildDate>Sun, 03 Apr 2022 13:59:51 +0800</lastBuildDate><atom:link href="https://luxaviar.github.io/categories/Physics/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>刚体物理引擎实现之碰撞检测</title>
+      <link>https://luxaviar.github.io/post/20220423-%E5%88%9A%E4%BD%93%E7%89%A9%E7%90%86%E5%BC%95%E6%93%8E%E5%AE%9E%E7%8E%B0%E4%B9%8B%E7%A2%B0%E6%92%9E%E6%A3%80%E6%B5%8B/</link>
+      <pubDate>Sun, 03 Apr 2022 13:59:51 +0800</pubDate>
+      
+      <guid>https://luxaviar.github.io/post/20220423-%E5%88%9A%E4%BD%93%E7%89%A9%E7%90%86%E5%BC%95%E6%93%8E%E5%AE%9E%E7%8E%B0%E4%B9%8B%E7%A2%B0%E6%92%9E%E6%A3%80%E6%B5%8B/</guid>
+      <description>GJK GJK（Gilbert-Johnson-Keerthi）是一个简洁优雅的算法，用来判断两个凸几何体之间是否发生碰撞，现代物理引擎基本都采用</description>
+    </item>
+    
+  </channel>
+</rss>
