@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>刚体物理引擎实现之约束算解 - Luxaviar&#39;s Blog</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="luxaviar" /><meta name="description" content="约束(Constraints) 约束就是模拟过程中必须遵守的规则，三维空间中的自由刚体有6个自由度：3个位置和3个转动; 二维空间中的刚体有3个" /><meta name="keywords" content="Physics, Sequential Impulses" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.87.0-DEV with theme even" />
+
+
+<link rel="canonical" href="https://luxaviar.github.io/post/20220404-%E5%88%9A%E4%BD%93%E7%89%A9%E7%90%86%E5%BC%95%E6%93%8E%E5%AE%9E%E7%8E%B0%E4%B9%8B%E7%BA%A6%E6%9D%9F%E7%AE%97%E8%A7%A3/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<link href="/sass/main.min.f92fd13721ddf72129410fd8250e73152cc6f2438082b6c0208dc24ee7c13fc4.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="刚体物理引擎实现之约束算解" />
+<meta property="og:description" content="约束(Constraints) 约束就是模拟过程中必须遵守的规则，三维空间中的自由刚体有6个自由度：3个位置和3个转动; 二维空间中的刚体有3个" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://luxaviar.github.io/post/20220404-%E5%88%9A%E4%BD%93%E7%89%A9%E7%90%86%E5%BC%95%E6%93%8E%E5%AE%9E%E7%8E%B0%E4%B9%8B%E7%BA%A6%E6%9D%9F%E7%AE%97%E8%A7%A3/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-04-04T16:08:20+08:00" />
+<meta property="article:modified_time" content="2022-04-04T16:08:20+08:00" />
+
+<meta itemprop="name" content="刚体物理引擎实现之约束算解">
+<meta itemprop="description" content="约束(Constraints) 约束就是模拟过程中必须遵守的规则，三维空间中的自由刚体有6个自由度：3个位置和3个转动; 二维空间中的刚体有3个"><meta itemprop="datePublished" content="2022-04-04T16:08:20+08:00" />
+<meta itemprop="dateModified" content="2022-04-04T16:08:20+08:00" />
+<meta itemprop="wordCount" content="9353">
+<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="刚体物理引擎实现之约束算解"/>
+<meta name="twitter:description" content="约束(Constraints) 约束就是模拟过程中必须遵守的规则，三维空间中的自由刚体有6个自由度：3个位置和3个转动; 二维空间中的刚体有3个"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">luxaviar的网络日志</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">归档</li>
+      </a><a href="/tags/">
+        <li class="mobile-menu-item">标签</li>
+      </a><a href="/categories/">
+        <li class="mobile-menu-item">分类</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">luxaviar的网络日志</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">归档</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/tags/">标签</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/categories/">分类</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">刚体物理引擎实现之约束算解</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-04-04 </span>
+        <div class="post-category">
+            <a href="/categories/Math/"> Math </a>
+            <a href="/categories/Algorithm/"> Algorithm </a>
+            <a href="/categories/Physics/"> Physics </a>
+            </div>
+        <span id="busuanzi_container_page_pv" class="more-meta"> <span id="busuanzi_value_page_pv"><img src="/img/spinner.svg" alt="spinner.svg"/></span> times read </span>
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#约束constraints">约束(Constraints)</a>
+      <ul>
+        <li><a href="#相等约束equality-constraints">相等约束(Equality Constraints)</a></li>
+        <li><a href="#非相等约束inequality-constraints">非相等约束(Inequality Constraints)</a></li>
+      </ul>
+    </li>
+    <li><a href="#force-based-dynamics">Force-Based dynamics</a>
+      <ul>
+        <li><a href="#施加约束力的步骤">施加约束力的步骤</a></li>
+        <li><a href="#约束系统">约束系统</a>
+          <ul>
+            <li><a href="#状态向量">状态向量</a></li>
+            <li><a href="#牛顿第二定律">牛顿第二定律</a></li>
+            <li><a href="#约束">约束</a></li>
+            <li><a href="#c的导数">C的导数</a></li>
+            <li><a href="#计算约束力">计算约束力</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#sequential-impulses">Sequential Impulses</a>
+      <ul>
+        <li><a href="#计算速度">计算速度</a></li>
+        <li><a href="#同时解决多个约束">同时解决多个约束</a></li>
+        <li><a href="#直观理解">直观理解</a>
+          <ul>
+            <li><a href="#投影的类比">投影的类比</a></li>
+            <li><a href="#空间变换的类比">空间变换的类比</a></li>
+          </ul>
+        </li>
+        <li><a href="#碰撞约束">碰撞约束</a>
+          <ul>
+            <li><a href="#推导j">推导J</a></li>
+            <li><a href="#计算λ">计算λ</a></li>
+            <li><a href="#baumgarte-stabilization">Baumgarte Stabilization</a></li>
+            <li><a href="#restitution">Restitution</a></li>
+            <li><a href="#摩擦">摩擦</a></li>
+            <li><a href="#penetration-slop">Penetration Slop</a></li>
+            <li><a href="#restitution-slop">Restitution Slop</a></li>
+          </ul>
+        </li>
+        <li><a href="#实现优化">实现优化</a>
+          <ul>
+            <li><a href="#warm-starting">Warm starting</a></li>
+            <li><a href="#island">Island</a></li>
+            <li><a href="#sleeping">Sleeping</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <li><a href="#参考">参考</a></li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="约束constraints">约束(Constraints)</h1>
+<p>约束就是模拟过程中必须遵守的规则，三维空间中的自由刚体有6个自由度：3个位置和3个转动; 二维空间中的刚体有3个自由度：2个位置和1个转动，约束等于从这些自由度中做了一些削减。例如，将空间中的一个物体固定在其质心的约束使该物体的自由度减少了3：所有的位置自由度都被移除，因此该物体现在只能以3自由度旋转。</p>
+<p>在一个基于约束的物理引擎中，我们将所有东西都建模为约束：包括碰撞触点、摩擦、弹簧、滑轮等等。</p>
+<p>约束被定义为<strong>behavior function</strong>或者<strong>constraint function</strong>，用符号<span class="math inline">\(C\)</span>表示。它接收一个或者两个刚体的状态(位置、朝向等)作为输入，输出一个标量值。如果返回值在一个可接受的范围，那么约束就得到满足。在每一步模拟中，我们都要保证<span class="math inline">\(C\)</span>的返回值是可接受的。</p>
+<h2 id="相等约束equality-constraints">相等约束(Equality Constraints)</h2>
+<p>相等约束就是<span class="math inline">\(C\)</span>的返回值只有0才是可接受的。</p>
+<p>例子：假设在2D空间中有一个粒子，它的位置是<span class="math inline">\(p\)</span>，它的约束是和原点保持一个固定的距离<span class="math inline">\(l\)</span>，那么<span class="math inline">\(C\)</span>就是：</p>
+<p><span class="math display">\[C(p)=\left \| p  \right \| - l
+\]</span></p>
+<p>在这个例子中<span class="math inline">\(C\)</span>是一个包含两个变量(<span class="math inline">\(p_x,p_y\)</span>)的函数，假设<span class="math inline">\(l\)</span>为2，我们可以很容易画出<span class="math inline">\(C\)</span>的图像。</p>
+<p><figure>
+  <img src="/images/20220404-%e5%88%9a%e4%bd%93%e7%89%a9%e7%90%86%e5%bc%95%e6%93%8e%e5%ae%9e%e7%8e%b0%e4%b9%8b%e7%ba%a6%e6%9d%9f%e7%ae%97%e8%a7%a3/constraint-hypersurface.png" alt="image" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p>显然，只有蓝色圈上的点才满足<span class="math inline">\(C=0\)</span>的约束条件，所有这些满足约束的点构成一个约束超平面(<strong>constraint hypersurface</strong>)。</p>
+<p>绿色的箭头，显示了<span class="math inline">\(C\)</span>的梯度，它指向了<span class="math inline">\(C \neq 0\)</span>的区域，不论沿着箭头前进还是后退都会导致约束不满足。</p>
+<p>约束超平面的参数往往有多个，很多时候无法直观的画出图像，但是它们在本质上是一样的。</p>
+<h2 id="非相等约束inequality-constraints">非相等约束(Inequality Constraints)</h2>
+<p>常见的例子是刚体之间的<strong>non-penetration constraint</strong>，这个约束用来做刚体的碰撞算解，保证两个刚体不会相交。</p>
+<p>考虑如下两个刚体</p>
+<p><figure>
+  <img src="/images/20220404-%e5%88%9a%e4%bd%93%e7%89%a9%e7%90%86%e5%bc%95%e6%93%8e%e5%ae%9e%e7%8e%b0%e4%b9%8b%e7%ba%a6%e6%9d%9f%e7%ae%97%e8%a7%a3/contact-constraint.png" alt="image" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p>假设碰撞点是<span class="math inline">\(P_A\)</span>和<span class="math inline">\(P_B\)</span>，则约束公式为：</p>
+<p><span class="math display">\[C(p_A,\alpha_A,p_B,\alpha_B)=(P_B - P_A) \cdot n=(p_B+R(\alpha_B)r_B-p_A-R(\alpha_A)r_A) \cdot n
+\]</span></p>
+<p>其中<span class="math inline">\(r_x\)</span>表示物体中心到碰撞点的向量，<span class="math inline">\(R(\theta)\)</span>表示旋转矩阵。公式右边是将两个碰撞点的向量转换到世界空间，相减之后再投影到碰撞法线<span class="math inline">\(n\)</span>，如果投影的长度<span class="math inline">\(\ge 0\)</span>，也就是说<span class="math inline">\(A\)</span>和<span class="math inline">\(B\)</span>依然保持分离的状态，没有撞到一起。</p>
+<h1 id="force-based-dynamics">Force-Based dynamics</h1>
+<p>直接修改<span class="math inline">\(p\)</span>的位置使得<span class="math inline">\(C=0\)</span>，往往会导致不真实的表现，有一种直观的算解是基于力的动力学(<strong>force-based dynamics</strong>)，它计算出额外施加约束力使得物体满足约束的同时不打破牛顿定律。</p>
+<p>因为对任意的自变量<span class="math inline">\(C=0\)</span>总是成立，所以<span class="math inline">\(C\)</span>的一阶导数（对时间<span class="math inline">\(t\)</span>求导）<span class="math inline">\(C'=0\)</span>，进一步<span class="math inline">\(C\)</span>的二阶导数<span class="math inline">\(C''=0\)</span>也成立。回到最开始的相等约束那个例子，我们先用距离的平方的形式改写<span class="math inline">\(C\)</span>：</p>
+<p><span class="math display">\[C=\frac 1 2 (p \cdot p-l^2)
+\]</span></p>
+<p>这个新函数依然满足位置和原点的距离是<span class="math inline">\(l\)</span>的约束，同时它的一阶导数是：</p>
+<p><span class="math display">\[\begin{align}
+C'=&(\frac 1 2 (p_xp_y+p_xp_y))'\\
+=& \frac 1 2 (p_xp_y)'+ \frac 1 2 (p_xp_y)'\\
+=& \frac 1 2 (p_x'p_y+p_xp_y')+\frac 1 2 (p_x'p_y+p_xp_y')\\
+=& p_x'p_y+p_xp_y'\\
+=& p \cdot p'\\
+\end{align}
+\]</span></p>
+<p>其中<span class="math inline">\(p'\)</span>是位置对时间<span class="math inline">\(t\)</span>求导，也就是速度<span class="math inline">\(v\)</span>，任何满足<span class="math inline">\(p \cdot v=0\)</span>的<span class="math inline">\(v\)</span>都是合法的速度。在这个例子中，只有和超平面(圆环)相切的速度才是合法值。<span class="math inline">\(C\)</span>的二阶导数是：</p>
+<p><span class="math display">\[C''=p'' \cdot p + p' \cdot p'
+\]</span></p>
+<p><span class="math inline">\(p''\)</span>就是加速度<span class="math inline">\(a\)</span>，所有满足<span class="math inline">\(C''\)</span>的<span class="math inline">\(a\)</span>都是合法加速度。在这个例子中，只有相对原点朝内或者朝外的加速度才是合法值。</p>
+<p>我们可以用力来表示加速度。假设所有的外力是<span class="math inline">\(f_{ext}\)</span>，为了保证约束，我们需要额外施加的约束力是<span class="math inline">\(f_C\)</span>，同时粒子有质量<span class="math inline">\(m\)</span>，那么加速度是：</p>
+<p><span class="math display">\[a=p''=\frac {f_{ext}+f_C} m
+\]</span></p>
+<p>代换到<span class="math inline">\(C''\)</span>之中：</p>
+<p><span class="math display">\[\frac {f_{ext}+f_C} m \cdot p + p' \cdot p'=0
+\]</span></p>
+<p>整理一下可得：</p>
+<p><span class="math display">\[f_C \cdot p=-f_{ext} \cdot p - mp' \cdot p'
+\]</span></p>
+<p>这是一个包含两个未知量（<span class="math inline">\(f_C\)</span>的<span class="math inline">\(x\)</span>和<span class="math inline">\(y\)</span>分量）的方程，为了解这个方程，我们还需要引入另外一个条件。</p>
+<p>直观上我们知道，为了保证物体和原点的距离是<span class="math inline">\(l\)</span>，它在这个方向的速度分量必须是<span class="math inline">\(0\)</span>，同时约束力总是和圆的运动轨迹垂直，因此约束力和速度必然是垂直的，于是：</p>
+<p><span class="math display">\[f_C \cdot p'=0
+\]</span></p>
+<p><span class="math inline">\(C\)</span>的一阶导告诉我们<span class="math inline">\(p \cdot p'=0\)</span>，现在又有了<span class="math inline">\(f_C \cdot p'=0\)</span>，因此<span class="math inline">\(f_C\)</span>和<span class="math inline">\(p\)</span>都和<span class="math inline">\(p'\)</span>是正交的，从而<span class="math inline">\(f_C\)</span>和<span class="math inline">\(p\)</span>平行，于是我们可以得到一个简洁的公式：</p>
+<p><span class="math display">\[f_C=\lambda p
+\]</span></p>
+<p><span class="math inline">\(\lambda\)</span>就是约束力的强度，只要我们额外施加这么大的力那么就能保证约束<span class="math inline">\(C\)</span>得到满足。将<span class="math inline">\(\lambda\)</span>带入二阶导推出的公式可得：</p>
+<p><span class="math display">\[\lambda = \frac {-f_{ext} \cdot p - mp' \cdot p'} {p \cdot p}
+\]</span></p>
+<p><span class="math inline">\(\lambda\)</span>被称为拉格朗日乘子(<strong>Lagrange multiplier</strong>)，对于任何的约束算解都包含了一个力方向和它的<span class="math inline">\(\lambda\)</span>。</p>
+<h2 id="施加约束力的步骤">施加约束力的步骤</h2>
+<p>回顾一下前面的推导过程，我们可以总结出一般的计算约束力的步骤：</p>
+<ol>
+<li>计算外力<span class="math inline">\(f_{ext}\)</span>。</li>
+<li>计算约束力<span class="math inline">\(f_C\)</span>。</li>
+<li>应用所有的力，按照牛顿力学模拟。</li>
+</ol>
+<h2 id="约束系统">约束系统</h2>
+<p>真实的物理模拟必须考虑许多对象的多个约束同时得到满足，约束不能单独处理，因为一个约束施加的力可能会影响另一个约束施加的力。在<strong>force-base dynamics</strong>下我们必须使用向量和矩阵一次性算解所有的约束，而且包括平动和转动。</p>
+<h3 id="状态向量">状态向量</h3>
+<p>假设<span class="math inline">\(q\)</span>表示所有刚体的状态向量：</p>
+<p><span class="math display">\[q=\begin{bmatrix} p_1 \\ \alpha_1 \\ p_2 \\ \alpha_2 \\ \vdots \\ p_n \\ \alpha_n \end{bmatrix}=\begin{bmatrix} q_1 \\ q_2 \\ \vdots \\ q_n \end{bmatrix}
+\]</span></p>
+<p>其中，<span class="math inline">\(p\)</span>是位置，<span class="math inline">\(\alpha\)</span>是旋转（2D情况下是<span class="math inline">\(2 \times 1\)</span>的列向量，3D情况下是<span class="math inline">\(3\times 1\)</span>的列向量）。<span class="math inline">\(q\)</span>是关于时间<span class="math inline">\(t\)</span>的函数，对其求一阶导就得到一个包含线速度和角速度的速度矢量：</p>
+<p><span class="math display">\[\overrightarrow v=\frac{\partial q }{\partial t}=\begin{bmatrix} 
+\overrightarrow v_1 \\ \overrightarrow \omega_1 \\ \overrightarrow v_2 \\ \overrightarrow \omega_2 \\ \vdots \\ \overrightarrow v_n \\ \overrightarrow \omega_n \end{bmatrix}
+\]</span></p>
+<p>其二阶导就是加速度<span class="math inline">\(a\)</span>。</p>
+<h3 id="牛顿第二定律">牛顿第二定律</h3>
+<p><span class="math inline">\(M\)</span>是质量矩阵，它是如下的对角矩阵：</p>
+<p><span class="math display">\[M=\begin{bmatrix} M_1 & & & & & & \\ & I_1 & & & & & \\ & & M_2 & & & & \\ & & & I_2 & & & \\  & & & & \ddots & & \\ & & & & & M_n &\\ & & & & & & I_n \end{bmatrix}
+\]</span></p>
+<p>其中<span class="math inline">\(I_n\)</span>是转动惯量，<span class="math inline">\(M_n\)</span>是质量（2D情况下每个<span class="math inline">\(M_n\)</span>都是2x2的对角矩阵，比如<span class="math inline">\(M_1 = {\left[ {\begin{array}{ccc} m_1 & 0 \\ 0 & m_1 \\ \end{array} } \right]}\)</span>，3D以此类推）。<span class="math inline">\(M\)</span>的逆矩阵是：</p>
+<p><span class="math display">\[M=\begin{bmatrix} M_1^{-1} & & & & & & \\ & I_1^{-1} & & & & & \\ & & M_2^{-1} & & & & \\ & & & I_2^{-1} & & & \\  & & & & \ddots & & \\ & & & & & M_n^{-1} &\\ & & & & & & I_n^{-1} \end{bmatrix}
+\]</span></p>
+<p><span class="math inline">\(F\)</span>是合力</p>
+<p><span class="math display">\[F=F_{ext}+F_C=\begin{bmatrix} f_1 \\ \tau_1 \\ f_2 \\ \tau_2 \\ \vdots \\ f_n \\ \tau_n \end{bmatrix}
+\]</span></p>
+<p>其中<span class="math inline">\(\tau\)</span>是力矩。</p>
+<p>根据牛顿第二定律，可得：</p>
+<p><span class="math display">\[a=q''=M^{-1}F=M^{-1}(F_{ext}+F_C)
+\]</span></p>
+<h3 id="约束">约束</h3>
+<p>假设约束有<span class="math inline">\(m\)</span>个，则约束函数<span class="math inline">\(C(q)\)</span>为：</p>
+<p><span class="math display">\[C(q)=\begin{bmatrix} C_1(q) \\ C_2(q) \\ \vdots \\ C_m(q) \end{bmatrix}
+\]</span></p>
+<p>我们希望<span class="math inline">\(C(q)\)</span>的输出，越接近0越好。</p>
+<h3 id="c的导数">C的导数</h3>
+<p><span class="math inline">\(C\)</span>对时间<span class="math inline">\(t\)</span>求导，根据链式法则我们有：</p>
+<p><span class="math display">\[\frac{\mathrm{d} C }{\mathrm{d} t}=\frac{\mathrm{d} C}{\mathrm{d} q}\overrightarrow v
+\]</span></p>
+<p>我们定义<span class="math inline">\(C\)</span>的雅克比矩阵(<strong>Jacobian Matrix</strong>)为：</p>
+<p><span class="math display">\[J=\frac{\mathrm{d} C}{\mathrm{d} q}
+\]</span></p>
+<p>雅克比矩阵是梯度的推广，它告诉我们针对每个状态的改变，<span class="math inline">\(C\)</span>会如何变化：</p>
+<p><span class="math display">\[J=\begin{bmatrix} \frac{\partial C_1}{\partial q_1} & \frac{\partial C_1}{\partial q_2} & \cdots & \frac{\partial C_1}{\partial q_n} 
+\\  \frac{\partial C_2}{\partial q_1} & \frac{\partial C_2}{\partial q_2} & \cdots & \frac{\partial C_2}{\partial q_n}
+\\ \vdots & \vdots & \ddots & \vdots
+\\ \frac{\partial C_m}{\partial q_1} & \frac{\partial C_m}{\partial q_2} & \cdots & \frac{\partial C_m}{\partial q_n}
+\end{bmatrix}
+\]</span></p>
+<p><span class="math inline">\(J\)</span>的每一行就是<span class="math inline">\(\overrightarrow v\)</span>的各个分量的系数：</p>
+<p><span class="math display">\[\frac{\mathrm{d} C }{\mathrm{d} t}={J}\overrightarrow v
+\]</span></p>
+<p>在只考虑碰撞约束的例子中<span class="math inline">\(J\)</span>是一个稀疏矩阵，因为每个约束最多包含两个刚体（两两碰撞）。</p>
+<p><span class="math inline">\(C\)</span>的二阶导是：</p>
+<p><span class="math display">\[C''=J'q'+Jq''
+\]</span></p>
+<p>根据牛顿第二定律（加速度<span class="math inline">\(a=\frac F M\)</span>)，我们有：</p>
+<p><span class="math display">\[C''=J'q'+JM^{-1}(F_{ext}+F_C)
+\]</span></p>
+<h3 id="计算约束力">计算约束力</h3>
+<p>我们希望<span class="math inline">\(C''=0\)</span>，因此：</p>
+<p><span class="math display">\[JM^{-1}F_C=-J'q'-JM^{-1}F_{ext}
+\]</span></p>
+<p>我们知道约束力和速度正交，因此：</p>
+<p><span class="math display">\[F^T_C q'=0
+\]</span></p>
+<p>我们同样希望<span class="math inline">\(\frac{\mathrm{d} C }{\mathrm{d} t}=0\)</span>，因此：</p>
+<p><span class="math display">\[Jq'=0
+\]</span></p>
+<p>于是我们得到：</p>
+<p><span class="math display">\[F_C=J^T \lambda
+\]</span></p>
+<p><span class="math inline">\(\lambda\)</span>有<span class="math inline">\(m\)</span>个分量，设为<span class="math inline">\(\lambda_i\)</span>，<span class="math inline">\(J\)</span>的行向量设为<span class="math inline">\(\Delta C_i\)</span>，则：</p>
+<p><span class="math display">\[F_C=J^T \lambda=\Delta C_1 \lambda_1 + \Delta C_2 \lambda_2 + \cdots + \Delta C_m \lambda_m
+\]</span></p>
+<p><span class="math inline">\(F_C\)</span>是<span class="math inline">\(J\)</span>矩阵的行向量的线性组合，而<span class="math inline">\(J\)</span>的行向量是约束函数的梯度。虽然这个公式比较复杂，但本质上和之前那个简单例子一样：梯度正交于约束超平面，并且是不允许移动的方向。也就是说，这个线性组合的向量，指向被禁止的方向，额外的约束力将只存在于这些方向，最终使得系统满足各种约束。</p>
+<p>现在我们还不知道<span class="math inline">\(\lambda\)</span>各个分量的大小，我们需要把<span class="math inline">\(J^T\lambda\)</span>带入之前的公式：</p>
+<p><span class="math display">\[JM^{-1}F_C=-J'q'-JM^{-1}F_{ext}
+\]</span></p>
+<p>得到一个关于<span class="math inline">\(\lambda\)</span>线性方程组，线性方程组有很多解法，一旦我们得到了<span class="math inline">\(\lambda_i\)</span>我们就解算出了约束力<span class="math inline">\(F_C\)</span>。</p>
+<h1 id="sequential-impulses">Sequential Impulses</h1>
+<p>冲量(<strong>Impulse</strong>)是力对时间的积分：</p>
+<p><span class="math display">\[P=\int F dt
+\]</span></p>
+<p>等价于动量的变化量。</p>
+<p>一个常量的力<span class="math inline">\(F\)</span>，累计作用<span class="math inline">\(h\)</span>时间的冲量为：</p>
+<p><span class="math display">\[P = hF
+\]</span></p>
+<p>当两个刚体碰撞时，接触时间非常短暂（无限接近于0），在此期间有一个互斥的力，使得它们的速度剧烈变化。</p>
+<p>顺序冲量(<strong>Sequential Impulses</strong>)通过找出满足约束的冲量从而直接改变速度，而非通过添加约束力的方式来满足约束，这个方案由著名的 Box2D 的作者 Erin Catto 提出并推广。和<code>Force-Based dynamics</code>不同，它属于<code>Impluse-Based Dynamics</code>，它不需要构造一个一次性的解决方案（一个巨大的线性方程组）。它只要每次处理一个单独的约束，并遍历全部的约束，如此循环下去，直到<span class="math inline">\(C'\)</span>接近0或者循环次数到达上限。</p>
+<p>相对于基于力的方法，它最大的优点是算法相对简单，也更容易直观地理解。在大多数情况下，它还具有更高的计算效率，这使得它比基于力的方法得到更广泛的应用。</p>
+<p>步骤：</p>
+<ol>
+<li>使用semi-implicit欧拉积分模拟，得到速度，这些速度可能违反约束条件。</li>
+<li>顺序应用冲量到每个约束，使得约束条件满足，直到冲量足够小或者最大迭代次数到达上限。</li>
+<li>使用新的速度模拟。</li>
+</ol>
+<h2 id="计算速度">计算速度</h2>
+<p>设<span class="math inline">\(\overrightarrow v_f\)</span>是要求的当前时刻的速度矢量，<span class="math inline">\(\overrightarrow v_{i}\)</span>是前一时刻的速度矢量，则未约束的速度为：</p>
+<p><span class="math display">\[\overrightarrow v^*_f=\overrightarrow v_{i}+\Delta tM^{-1}F_{ext}
+\]</span></p>
+<p>设<span class="math inline">\(P_C\)</span>是约束冲量，将其除以质量，我们可以得到速度的变化量，然后将这个变化量加到未约束的速度上，得到满足约束的速度。</p>
+<p><span class="math display">\[\begin{align}
+\overrightarrow v_f=&{\overrightarrow v^*_f} + M^{-1}P_C\\
+=&\overrightarrow v_{i}+\Delta tM^{-1}F_{ext}+M^{-1}P_C
+\end{align}
+\]</span></p>
+<p>如何得到<span class="math inline">\(P_C\)</span>呢？我们知道冲量和瞬时的力的方向一致，我们再次利用约束力必须和<span class="math inline">\(C\)</span>的梯度平行的事实，于是：</p>
+<p><span class="math display">\[P_C=J^T\lambda
+\]</span></p>
+<p>我们知道冲量是力对时间的累积，因此也可以写成<span class="math inline">\(P_C=\Delta t M^{-1} F_C\)</span>，于是：</p>
+<p><span class="math display">\[\begin{align}
+\overrightarrow v_f&=\overrightarrow v_i+ \Delta t M^{-1} F_{ext} + \Delta t {M}^{-1} F_C\\
+&=\overrightarrow v_i+ \Delta t M^{-1}( F_{ext} + F_C)
+\end{align}
+\]</span></p>
+<p>因为<span class="math inline">\(F_C\)</span>是我们要设定的一个值，我们可以完全把<span class="math inline">\(F_{ext}\)</span>的影响包含在<span class="math inline">\(F_C\)</span>内，因此不妨把<span class="math inline">\(F_{ext}\)</span>去掉，只用<span class="math inline">\(F_C\)</span>代替，于是：</p>
+<p><span class="math display">\[\begin{align}
+\overrightarrow v_f&=\overrightarrow v_i+ \Delta t M^{-1} F_C\\
+&=\overrightarrow v_i+ M^{-1} P_C\\
+&=\overrightarrow v_i+ M^{-1} J^T \lambda
+\end{align}
+\]</span></p>
+<p>基于冲量的方案，略过了牛顿第二定律对力和加速度的计算，它会直接产生一个瞬时速度，有可能会让模拟失真。为了解决这个问题，我们引入一个bias，来减少影响：</p>
+<p><span class="math display">\[\frac{\mathrm{d} C }{\mathrm{d} t}=J\overrightarrow v_f+b=0
+\]</span></p>
+<p>将之前的公式带入这个等式，可得：</p>
+<p><span class="math display">\[\begin{align}
+J(\overrightarrow v_i+ M^{-1} J^T \lambda) + b &= 0\\
+JM^{-1}J^T\lambda &= -(J{\overrightarrow v_i}+b) \\
+\lambda &=\frac {-(J{\overrightarrow v_i}+b)} {JM^{-1}J^T}
+\end{align}
+\]</span></p>
+<p>其中<span class="math inline">\(JM^{-1}J^T\)</span>被称为有效质量（<code>Effective Mass</code>）。</p>
+<p>不妨把<span class="math inline">\(M^{-1} J^T \lambda\)</span>看做是一个速度的变化量<span class="math inline">\(\overrightarrow \Delta v\)</span>，于是<span class="math inline">\(J(\overrightarrow v_i+ \overrightarrow \Delta v) + b = 0\)</span>，而<span class="math inline">\(\overrightarrow \Delta v\)</span>和<span class="math inline">\(M^{-1}J^T\)</span>成比例，比例系数就是<span class="math inline">\(\lambda\)</span>（<strong>拉格朗日乘子</strong>）。只要解开<span class="math inline">\(\lambda\)</span>，我们就可以通过<span class="math inline">\(P_C=J^T\lambda\)</span>得到约束冲量，从而更新速度<span class="math inline">\(\overrightarrow v_f\)</span>。</p>
+<p>如果我们在物理系统中有多个约束，那么我们只需在所有约束条件下迭代重复这个过程，系统就会收敛到一个全局解。</p>
+<h2 id="同时解决多个约束">同时解决多个约束</h2>
+<p>为了稳定性考虑，有时候多个约束也可以被同时解决，比如<code>prismatic joint</code>，我们需要一次性解决距离和旋转约束，而不能分开处理。</p>
+<p>这个时候雅克比行列式就变成了一个2x12的矩阵，而<span class="math inline">\(\lambda\)</span>求值公式就变成了:</p>
+<p><span class="math display">\[\lambda = (JM^{-1}J^T)^{-1}(-J\overrightarrow v_i-b)
+\]</span></p>
+<p>此时<span class="math inline">\(JM^{-1}J^T\)</span>不是一个标量，而是一个2x2矩阵，而<span class="math inline">\(\lambda\)</span>也不是标量，它变成了一个2x1的矩阵。</p>
+<p>不过<span class="math inline">\(\Delta v\)</span>的维度还是不变，因为<span class="math inline">\(M^{-1}J^T\lambda\)</span>依然是一个12x1矩阵。</p>
+<h2 id="直观理解">直观理解</h2>
+<h3 id="投影的类比">投影的类比</h3>
+<p>应用约束的迭代过程，有点像把某个点（状态）移动到给定的平面（约束超平面）的过程。我们知道平面方程：</p>
+<p><span class="math display">\[ax+by+cz+d=0
+\]</span></p>
+<p>如果点<span class="math inline">\(P\)</span>在平面外，那么<span class="math inline">\(ax+by+cz+d \neq 0\)</span>，将<span class="math inline">\(P\)</span>点带回到平面的最快方式是，让<span class="math inline">\(P\)</span>沿着平面法线<span class="math inline">\((a,b,c)\)</span>投影到平面上。从线性方程的角度看，平面方程可以写成：</p>
+<p><span class="math display">\[NP+d=0
+\]</span></p>
+<p><span class="math inline">\(N\)</span>表示平面法线，<span class="math inline">\(P\)</span>是任意点。</p>
+<p>为了让<span class="math inline">\(P\)</span>投影（回）到平面上，我们对<span class="math inline">\(P\)</span>施加改变量<span class="math inline">\(\Delta P\)</span>，这个改变量和法线<span class="math inline">\(N^T\)</span>是成比例的（方向一致，大小不确定，可正可负）。</p>
+<p>这等价于速度矢量的改变量<span class="math inline">\(\Delta v\)</span>，它是沿着<span class="math inline">\(J^T\)</span>（约束超平面的法线）的。但是，不同的刚体有不同的质量和转动惯量，我们不能统一的应用这个改变量到所有的刚体上，因此<span class="math inline">\(J^T\)</span>需要被质量矩阵<span class="math inline">\(M\)</span>修正：<span class="math inline">\(M^{-1}J^T\)</span>。</p>
+<p>应用<code>Sequential Impulse</code>的过程就是不断将<span class="math inline">\(\overrightarrow v\)</span>投影到约束超平面的过程，如果各个约束没有矛盾，那么我们会到的一个全局解。反过来，如果存在矛盾的约束，那么我们永远不可能得到一个全局解，就好比多个平面如果没有公共交点，那我们永远也找不到那个公共交点。</p>
+<h3 id="空间变换的类比">空间变换的类比</h3>
+<p>把雅克比矩阵看做坐标变换矩阵：</p>
+<ul>
+<li>类似旋转矩阵</li>
+<li>但是少了一些行，因此它将某些维度变成0</li>
+<li>转置少了一些列，因此某些维度被加了进来</li>
+</ul>
+<h4 id="速度变换">速度变换</h4>
+<p><span class="math inline">\(\frac{\mathrm{d} C }{\mathrm{d} t}=Jv\)</span>等价于把速度<span class="math inline">\(v\)</span>从笛卡尔空间的速度变换到约束空间的速度</p>
+<p><figure>
+  <img src="/images/20220404-%e5%88%9a%e4%bd%93%e7%89%a9%e7%90%86%e5%bc%95%e6%93%8e%e5%ae%9e%e7%8e%b0%e4%b9%8b%e7%ba%a6%e6%9d%9f%e7%ae%97%e8%a7%a3/jv-trans.png" alt="image" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<h4 id="力变换">力变换</h4>
+<p><span class="math inline">\(F_C=J^T\lambda\)</span>等价于把<span class="math inline">\(\lambda\)</span>从约束空间的力变换到笛卡尔空间的力</p>
+<p><figure>
+  <img src="/images/20220404-%e5%88%9a%e4%bd%93%e7%89%a9%e7%90%86%e5%bc%95%e6%93%8e%e5%ae%9e%e7%8e%b0%e4%b9%8b%e7%ba%a6%e6%9d%9f%e7%ae%97%e8%a7%a3/fc-trans.png" alt="image" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<h2 id="碰撞约束">碰撞约束</h2>
+<h3 id="推导j">推导J</h3>
+<p><figure>
+  <img src="/images/20220404-%e5%88%9a%e4%bd%93%e7%89%a9%e7%90%86%e5%bc%95%e6%93%8e%e5%ae%9e%e7%8e%b0%e4%b9%8b%e7%ba%a6%e6%9d%9f%e7%ae%97%e8%a7%a3/contact.png" alt="image" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p>考虑如上的碰撞，碰撞点是<span class="math inline">\(P_A\)</span>和<span class="math inline">\(P_B\)</span>，刚体的质心是<span class="math inline">\(C_A\)</span>和<span class="math inline">\(C_B\)</span>，这两个都应该被看做连续变化的量。除了位移以外，我们还要考虑旋转，为此引入<span class="math inline">\(r_A\)</span>和<span class="math inline">\(r_B\)</span>，它们是质心到碰撞点的向量，这也是连续变化的量（被转动影响）。<span class="math inline">\(n\)</span>是从<span class="math inline">\(A\)</span>指向<span class="math inline">\(B\)</span>的碰撞法线，<span class="math inline">\(t_1\)</span>和<span class="math inline">\(t_2\)</span>是碰撞切线，其中<span class="math inline">\(t_2\)</span>指向屏幕内。</p>
+<p>刚体碰撞约束就是要让穿透深度为0，于是存在一个位置约束：从<span class="math inline">\(P_A\)</span>指向<span class="math inline">\(P_B\)</span>的向量必须和<span class="math inline">\(n\)</span>的方向一致(两个向量的点积就是穿透深度，必须&gt;=0)。我们有：</p>
+<p><span class="math display">\[\begin{align}
+P_A=&C_A+\overrightarrow r_A\\
+P_B=&C_B+\overrightarrow r_B
+\end{align}
+\]</span></p>
+<p>所以位置约束<span class="math inline">\(C\)</span>是：</p>
+<p><span class="math display">\[\begin{align}
+C:&(P_B-P_A) \cdot \overrightarrow n \ge 0 \\
+C:&(C_B+\overrightarrow r_B-C_A-\overrightarrow r_A) \cdot \overrightarrow n \ge 0
+\end{align}
+\]</span></p>
+<p><span class="math inline">\(C\)</span>对时间<span class="math inline">\(t\)</span>求导得到：</p>
+<p><span class="math display">\[C':(-\overrightarrow V_A-\overrightarrow \omega_A \times \overrightarrow r_A + \overrightarrow V_B+\overrightarrow \omega_B \times \overrightarrow r_B) \cdot \overrightarrow n \ge 0
+\]</span></p>
+<p>利用三重积，整理公式，我们可以得到</p>
+<p><span class="math display">\[C':JV+b \ge 0
+\]</span></p>
+<p>其中</p>
+<p><span class="math display">\[\begin{align}
+J&=\begin{bmatrix} -\overrightarrow n^T & (-\overrightarrow r_A \times \overrightarrow n)^T & \overrightarrow n^T & (\overrightarrow r_B \times \overrightarrow n)^T \end{bmatrix}\\
+
+V&=\begin{bmatrix} \overrightarrow{V_A} \\ \overrightarrow{\omega_A} \\ \overrightarrow{V_B} \\ \overrightarrow{\omega_B}  \end{bmatrix} \\
+
+b&=0
+\end{align}
+\]</span></p>
+<p>注意我们得到的是<span class="math inline">\(JV+b \ge 0\)</span>，而非<span class="math inline">\(JV+b = 0\)</span>。这意味着当两个刚体没有穿透的时候约束显然得到保证，当发生穿透的时候，要保证<span class="math inline">\(JV+b=0\)</span>。</p>
+<p>上述推导的速度约束在几何上的解释是：<strong>两个碰撞点的相对速度在碰撞法线上的投影长度为0</strong>。因此只要我们解决了这个约束，两个碰撞点就不会穿透得更深了。</p>
+<h3 id="计算λ">计算λ</h3>
+<p>我们现在要求的是速度的约束增量<span class="math inline">\(\Delta V=M^{-1}J^T\lambda\)</span>，其中<span class="math inline">\(\lambda\)</span>是:</p>
+<p><span class="math display">\[\lambda=\frac {-(JV+b)} {JM^{-1}J^T}
+\]</span></p>
+<p>展开<span class="math inline">\({JM^{-1}J^T}\)</span>：</p>
+<p><span class="math display">\[\begin{align}
+JM^{-1}J^T=&\begin{bmatrix} -\overrightarrow n^T & (-\overrightarrow r_A \times \overrightarrow n)^T & \overrightarrow n^T & (\overrightarrow r_B \times \overrightarrow n)^T \end{bmatrix} 
+\begin{bmatrix} 
+M_A^{-1} & 0 & 0 & 0 \\ 
+0 & I_A^{-1} & 0 & 0 \\
+0 & 0 & M_B^{-1} & 0 \\
+0 & 0 & 0 & I_B^{-1}
+\end{bmatrix} 
+\begin{bmatrix} -\overrightarrow n \\ (-\overrightarrow r_A \times \overrightarrow n) \\ \overrightarrow n \\ (\overrightarrow r_B \times \overrightarrow n) \end{bmatrix}  \\
+=&\begin{bmatrix} -\overrightarrow n^T & (-\overrightarrow r_A \times \overrightarrow n)^T & \overrightarrow n^T & (\overrightarrow r_B \times \overrightarrow n)^T \end{bmatrix} 
+\begin{bmatrix}
+-M_A^{-1} \overrightarrow n \\
+-I_A^{-1} (\overrightarrow r_A \times \overrightarrow n) \\
+-M_B^{-1} \overrightarrow n \\
+-I_B^{-1} (\overrightarrow r_B \times \overrightarrow n)
+\end{bmatrix} \\
+=&
+\overrightarrow n^T M_A^{-1} \overrightarrow n +
+(\overrightarrow r_A \times \overrightarrow n)^T I_A^{-1} (\overrightarrow r_A \times \overrightarrow n) +
+\overrightarrow n^T M_B^{-1} \overrightarrow n +
+(\overrightarrow r_B \times \overrightarrow n)^T I_B^{-1} (\overrightarrow r_B \times \overrightarrow n)\\
+=&m_a^{-1}+ I_A^{-1} (\overrightarrow r_A \times \overrightarrow n) \cdot (\overrightarrow r_A \times \overrightarrow n) + m_b^{-1}+ I_B^{-1} (\overrightarrow r_B \times \overrightarrow n) \cdot (\overrightarrow r_B \times \overrightarrow n)
+\end{align}
+\]</span></p>
+<p>对于<span class="math inline">\(JV\)</span>，利用三重积变换公式，最终得到的就是<span class="math inline">\(B\)</span>和<span class="math inline">\(A\)</span>在法线的相对速度。</p>
+<p><span class="math display">\[\begin{align}
+JV=&\begin{bmatrix} -\overrightarrow n^T & (-\overrightarrow r_A \times \overrightarrow n)^T & \overrightarrow n^T & (\overrightarrow r_B \times \overrightarrow n)^T \end{bmatrix} \begin{bmatrix} \overrightarrow{V_A} \\ \overrightarrow{\omega_A} \\ \overrightarrow{V_B} \\ \overrightarrow{\omega_B}  \end{bmatrix} \\
+=&-V_A \cdot n - (r_A \times n)\cdot \omega_A + V_B \cdot n + (r_B \times n)\cdot \omega_B \\
+=&-V_A \cdot n - (\omega_A \times r_A)\cdot n + V_B \cdot n + (\omega_B \times r_B)\cdot n \\
+=&( V_B + (\omega_B \times r_B) - (V_A + (\omega_A \times r_A)))\cdot n
+\end{align}
+\]</span></p>
+<p>记住在循环中，我们每次只处理一个约束，然后立即修改刚体的速度，这个修改会影响同一个刚体后续的算解，某些情况下单次算解的速度反而会让这个刚体和其他刚体碰撞的更深。因此，我们需要对算解的速度差做一个截断，也就是我们要保证在整个算解过程中下述不等式得到满足：</p>
+<p><span class="math display">\[\sum \lambda_i \ge 0
+\]</span></p>
+<p><span class="math inline">\(\lambda_i\)</span>是第<span class="math inline">\(i\)</span>次循环的拉格朗日乘子。</p>
+<p>每次我们对一个碰撞计算出<span class="math inline">\(\lambda\)</span>，我们先拷贝一份之前的值，然后将<span class="math inline">\(\lambda\)</span>加到旧值，并截取到<span class="math inline">\([0, +\infty]\)</span>，然后计算它和拷贝值的差，这个差值才是我们实际要用来解决约束的<span class="math inline">\(\lambda\)</span>。</p>
+<h3 id="baumgarte-stabilization">Baumgarte Stabilization</h3>
+<p>只是算解出速度约束还不够，它只能避免碰撞不再继续深入，但不能分开两个已经有碰撞穿透的刚体，累积的误差还会导致“位置抖动”问题。</p>
+<p>我们需要引入<code>Baumgarte Stabilization</code>。基本想法是把穿透深度(可以看做是一个位置错误的量)，作为一个bias塞回速度约束中，可以直观理解为引入了额外的能量。</p>
+<p>在之前的公式中<span class="math inline">\(b\)</span>是0，现在不再是0了。我们已知穿透深度:</p>
+<p><span class="math display">\[d=(P_B-P_A) \cdot \overrightarrow n
+\]</span></p>
+<p>我们取<span class="math inline">\(b\)</span>为（<span class="math inline">\(d\)</span>是负值，因此前面取负号）:</p>
+<p><span class="math display">\[b=-\frac {\beta} {\Delta t} \cdot d
+\]</span></p>
+<p><span class="math inline">\(\beta\)</span>取<span class="math inline">\([0, 1]\)</span>（一般接近0），这个值没有正确答案。一个经验做法是，从0开始增加直到你的物理系统变得不稳定，然后取一半的值作为<span class="math inline">\(\beta\)</span>。</p>
+<h3 id="restitution">Restitution</h3>
+<p>仅仅把刚体分开是不够的，碰撞往往伴随着弹性形变，因此有一个反弹的力还需要模拟，我们还要继续加一个bias到<span class="math inline">\(b\)</span>中。</p>
+<p>刚体发生正碰撞时，碰撞前后的速度大小之比几乎是不变的，等于一个常数，它表示物体在碰撞前后速度的恢复程度和物体变形的恢复程度，也反映了碰撞中机械能损失的程度。</p>
+<p>我们称为<code>restitution</code>系数，记为<span class="math inline">\(C_R\)</span>，它被定义为两个刚体碰撞后分离的速度和两个刚体碰撞前接近速度的比率，一般取<span class="math inline">\([0, 1]\)</span>。<span class="math inline">\(C_R\)</span>越小，动能损失越大；反之，动能损失越小。</p>
+<p><code>restitution</code>对bias的贡献，就是将它乘以两个碰撞点的（相对）接近速度在法线的投影，注意这个投影也是负值，因此取负。</p>
+<p><span class="math display">\[-C_R(-\overrightarrow V_A-\overrightarrow \omega_A \times \overrightarrow r_A + \overrightarrow V_B+\overrightarrow \omega_B \times \overrightarrow r_B) \cdot \overrightarrow n
+\]</span></p>
+<p>所以，最终的<span class="math inline">\(b\)</span>项包含了<code>Baumgarte Term</code>和<code>Restitution Term</code>。</p>
+<p><span class="math display">\[b=-\frac {\beta} {\Delta t} \cdot d - C_R(-\overrightarrow V_A-\overrightarrow \omega_A \times \overrightarrow r_A + \overrightarrow V_B+\overrightarrow \omega_B \times \overrightarrow r_B) \cdot \overrightarrow n
+\]</span></p>
+<h3 id="摩擦">摩擦</h3>
+<p>目前为止，我们只处理了法线方向上的碰撞部分，现在来处理切线部分。摩擦力和法线压力成比例，因此它们取决于法线部分的处理结果。</p>
+<p>法线部分的碰撞约束倾向于让相对速度在法线方向的投影为0（不考虑<span class="math inline">\(b\)</span>项）。切线部分与此类似：它尝试让相对速度在（由两个切线构造的）切平面上的投影为0。</p>
+<p>切线部分和法线部分基本处理流程是一样的，只是投影的目标不同。因此，毫不奇怪，两条切线的雅可比矩阵看起来与法线的雅可比矩阵非常相似。让我们加入下标来区分这些雅克比矩阵。</p>
+<p><span class="math display">\[\begin{align}
+J_{\overrightarrow n}=&\begin{bmatrix} -\overrightarrow n^T & (-\overrightarrow r_A \times \overrightarrow n)^T & \overrightarrow n^T & (\overrightarrow r_B \times \overrightarrow n)^T \end{bmatrix}\\
+J_{\overrightarrow t_1}=&\begin{bmatrix} -\overrightarrow t_1^T & (-\overrightarrow r_A \times \overrightarrow t_1)^T & \overrightarrow t_1^T & (\overrightarrow r_B \times \overrightarrow t_1)^T \end{bmatrix} \\
+J_{\overrightarrow t_2}=&\begin{bmatrix} -\overrightarrow t_2^T & (-\overrightarrow r_A \times \overrightarrow t_2)^T & \overrightarrow t_2^T & (\overrightarrow r_B \times \overrightarrow t_2)^T \end{bmatrix}
+\end{align}
+\]</span></p>
+<p>同样类似的还有，拉格朗日乘子的截取，但是不同之处在于，这次我们不再简单截取到<span class="math inline">\([0, +\infty]\)</span>，而是取决于法线累积冲量（记为<span class="math inline">\(\lambda_{\overrightarrow  n_{sum}}\)</span>），整个过程类似于<span class="math inline">\(\lambda\)</span>的截取。</p>
+<h3 id="penetration-slop">Penetration Slop</h3>
+<p>为了让碰撞更稳定，我们要引入slop，让约束对碰撞更宽容。</p>
+<p><code>Baumgarte Stabilization</code>引入额外的能量让两个碰撞的物体分离，如果没有slop，两个物体如果只有一点碰撞穿透，这些额外的冲量也会立即作用上去，这很可能会导致抖动，结果就是物体应该静止时却很难保持不动。</p>
+<p>这个情况可以通过容许物体穿透非常小的深度，而不实际应用<code>Baumgarte Stabilization</code>得到缓解。我们允许一个微小的穿透slop，记为<span class="math inline">\(Slop_P\)</span>，那么Baumgarte项变为：</p>
+<p><span class="math display">\[\frac \beta {\Delta t} \cdot max(-d-Slop_P,0)
+\]</span></p>
+<p>如果穿透深度小于一定的值，那么不应用Baumgarte。</p>
+<h3 id="restitution-slop">Restitution Slop</h3>
+<p>同样的思想也可以应用到restitution上。考虑一个restitution 为0.3的弹性球和地板的碰撞，如果没有额外的措施它将一直和地板弹跳下去，即使它的高度已经非常低了，这是因为当它撞击地板时，总是获得一个非零的冲量反弹回去。</p>
+<p>有了<code>restitution slop</code>，我们可以在接近速度足够小时，不应用restitution，这和现实也是一致的（如果速度足够小，两个弹性球会碰在一起而不会弹开）。</p>
+<p>我们知道b的restitution项是：</p>
+<p><span class="math display">\[C_RV_C
+\]</span></p>
+<p>其中</p>
+<p><span class="math display">\[V_C=C_R(-\overrightarrow V_A-\overrightarrow \omega_A \times \overrightarrow r_A + \overrightarrow V_B+\overrightarrow \omega_B \times \overrightarrow r_B) \cdot \overrightarrow n
+\]</span></p>
+<p>加上<code>restitution slop</code>，记为<span class="math inline">\(Slop_R\)</span>，我们得到：</p>
+<p><span class="math display">\[C_Rmax(-V_C-Slop_R,0)
+\]</span></p>
+<p>如此一来，如果接近速度足够小，那么restitution项就是0。最终，b项变为：</p>
+<p><span class="math display">\[b=\frac \beta {\Delta t} \cdot max(-d-Slop_P,0) + C_Rmax(-V_C-Slop_R,0)
+\]</span></p>
+<h2 id="实现优化">实现优化</h2>
+<h3 id="warm-starting">Warm starting</h3>
+<p>为了加速计算，我们可以猜测一个合理<span class="math inline">\(\lambda\)</span>开始迭代，因为物理模拟有很高的时间和空间相关性，也称为高帧相关性（<code>Frame Coherence</code>），所以这个预估的值可以使用上一帧计算缓存的<span class="math inline">\(\lambda\)</span>，由于高帧相关性，它有很大概率能帮助迭代更快的到达收敛，这就是所谓的暖启动。为了避免过拟合，我们通常不直接使用缓存的值，而是使用它的一个比例值。</p>
+<p>当然这么做也是有代价的，如果前后两帧发生突变，反而会使收敛过程变慢。</p>
+<h3 id="island">Island</h3>
+<p>在约束物理模拟中，我们可以观察到一些物体会影响其他物体的运动，而另一些物体则不会。</p>
+<p><figure>
+  <img src="/images/20220404-%e5%88%9a%e4%bd%93%e7%89%a9%e7%90%86%e5%bc%95%e6%93%8e%e5%ae%9e%e7%8e%b0%e4%b9%8b%e7%ba%a6%e6%9d%9f%e7%ae%97%e8%a7%a3/island.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> 
+基于这个简单的观察，我们可以将这些物体分组成不同的<code>Island</code>，在<code>Island</code>内部这些物体通过约束力/冲动影响彼此的运动，但不会影响其他<code>Island</code>的物体的运动。这种分离使我们能够解决更小的约束组，为整个物理世界创造更小的系统而不是一个单一的大系统。这就消除了大量潜在的无用工作。</p>
+<h3 id="sleeping">Sleeping</h3>
+<p>当一个物体在模拟过程中停止运动时，它的位置在模拟的后续步骤中自然保持不变，直到某种外力使它再次运动。这使我们注意到另一个可能的优化：当<code>Island</code>中所有物体的线性和角速度保持在一个给定的公差以下的一小段时间后，我们可以停止模拟整个<code>Island</code>，这种状态被称为<code>Sleeping</code>。</p>
+<p>如果<code>Island</code>外的一个物体与<code>Island</code>上的任何一个物体发生碰撞，这个<code>Island</code>就会“苏醒”，再次进入模拟状态。如果任何其他外力或冲量作用在它的任何一个物体上，它也会苏醒。</p>
+<h1 id="参考">参考</h1>
+<ol>
+<li><a href="https://box2d.org/files/ErinCatto_UnderstandingConstraints_GDC2014.pdf" target="_blank" rel="noopener">Understanding Constraints</a> </li>
+<li><a href="https://www.toptal.com/game/video-game-physics-part-iii-constrained-rigid-body-simulation" target="_blank" rel="noopener">Constrained Rigid Body Simulation</a> </li>
+<li><a href="http://allenchou.net/game-physics-series/" target="_blank" rel="noopener">Game Physics Series</a> </li>
+<li><a href="https://ubm-twvideo01.s3.amazonaws.com/o1/vault/gdc09/slides/04-GDC09_Catto_Erin_Solver.pdf" target="_blank" rel="noopener">Modeling and Solving Constraints</a> </li>
+<li><a href="http://www.cs.cmu.edu/~baraff/sigcourse/index.html" target="_blank" rel="noopener">Physically Based Modeling: Principles and Practice</a> </li>
+<li><a href="https://dyn4j.org/2010/07/equality-constraints/" target="_blank" rel="noopener">Equality Constraints</a> </li>
+</ol>
+
+    </div>
+
+    <div class="post-copyright">
+  <p class="copyright-item">
+    <span class="item-title">Author</span>
+    <span class="item-content">luxaviar</span>
+  </p>
+  <p class="copyright-item">
+    <span class="item-title">LastMod</span>
+    <span class="item-content">
+        2022-04-04
+        
+    </span>
+  </p>
+  
+  <p class="copyright-item">
+    <span class="item-title">License</span>
+    <span class="item-content"><a rel="license noopener" href="https://creativecommons.org/licenses/by-nc/4.0/deed.en" target="_blank">知识共享署名-非商业性使用 4.0 国际许可协议</a></span>
+  </p>
+</div>
+<footer class="post-footer">
+      
+      <nav class="post-nav">
+        
+        <a class="next" href="/post/20220404-%E5%88%9A%E4%BD%93%E7%89%A9%E7%90%86%E5%BC%95%E6%93%8E%E5%AE%9E%E7%8E%B0%E4%B9%8B%E5%88%9A%E4%BD%93%E5%8A%A8%E5%8A%9B%E5%AD%A6/">
+            <span class="next-text nav-default">刚体物理引擎实现之刚体动力学</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+      <a href="https://github.com/luxaviar" class="iconfont icon-github" title="github"></a>
+  <a href="https://luxaviar.github.io/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  <div class="busuanzi-footer">
+    <span id="busuanzi_container_site_pv"> site pv: <span id="busuanzi_value_site_pv"><img src="/img/spinner.svg" alt="spinner.svg"/></span> </span>
+      <span class="division">|</span>
+    <span id="busuanzi_container_site_uv"> site uv: <span id="busuanzi_value_site_uv"><img src="/img/spinner.svg" alt="spinner.svg"/></span> </span>
+  </div>
+
+  <span class="copyright-year">
+    &copy; 
+    2020 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>luxaviar</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script>
+
+
+
+<script type="text/javascript" src="/js/main.min.c99b103c33d1539acf3025e1913697534542c4a5aa5af0ccc20475ed2863603b.js"></script>
+  <script type="text/javascript">
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$','$'], ['\\(','\\)']],
+        }
+    };
+  </script>
+  <script async src="https://cdn.jsdelivr.net/npm/mathjax@3.0.5/es5/tex-mml-chtml.js" integrity="sha256-HGLuEfFcsUJGhvB8cQ8nr0gai9EucOOaIxFw7qxmd+w=" crossorigin="anonymous"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>
