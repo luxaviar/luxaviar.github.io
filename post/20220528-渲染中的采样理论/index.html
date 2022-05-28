@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>渲染中的采样理论 - Luxaviar&#39;s Blog</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="luxaviar" /><meta name="description" content="采样定理 采样是将一个信号（例如时间或空间上连续的函数）转换为离散序列（时间或空间上离散的函数）的过程。信号可以是任何维度的连续函数，最常见的" /><meta name="keywords" content="rendering, signal process, anti-aliasing, aliasing, mipmap" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.87.0-DEV with theme even" />
+
+
+<link rel="canonical" href="https://luxaviar.github.io/post/20220528-%E6%B8%B2%E6%9F%93%E4%B8%AD%E7%9A%84%E9%87%87%E6%A0%B7%E7%90%86%E8%AE%BA/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<link href="/sass/main.min.f92fd13721ddf72129410fd8250e73152cc6f2438082b6c0208dc24ee7c13fc4.css" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="渲染中的采样理论" />
+<meta property="og:description" content="采样定理 采样是将一个信号（例如时间或空间上连续的函数）转换为离散序列（时间或空间上离散的函数）的过程。信号可以是任何维度的连续函数，最常见的" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://luxaviar.github.io/post/20220528-%E6%B8%B2%E6%9F%93%E4%B8%AD%E7%9A%84%E9%87%87%E6%A0%B7%E7%90%86%E8%AE%BA/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-05-28T17:03:42+08:00" />
+<meta property="article:modified_time" content="2022-05-28T17:03:42+08:00" />
+
+<meta itemprop="name" content="渲染中的采样理论">
+<meta itemprop="description" content="采样定理 采样是将一个信号（例如时间或空间上连续的函数）转换为离散序列（时间或空间上离散的函数）的过程。信号可以是任何维度的连续函数，最常见的"><meta itemprop="datePublished" content="2022-05-28T17:03:42+08:00" />
+<meta itemprop="dateModified" content="2022-05-28T17:03:42+08:00" />
+<meta itemprop="wordCount" content="8224">
+<meta itemprop="keywords" content="Rendering,Math," /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="渲染中的采样理论"/>
+<meta name="twitter:description" content="采样定理 采样是将一个信号（例如时间或空间上连续的函数）转换为离散序列（时间或空间上离散的函数）的过程。信号可以是任何维度的连续函数，最常见的"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://unpkg.com/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://unpkg.com/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
+</head>
+<body>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">luxaviar的网络日志</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+</div>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">归档</li>
+      </a><a href="/tags/">
+        <li class="mobile-menu-item">标签</li>
+      </a><a href="/categories/">
+        <li class="mobile-menu-item">分类</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
+</nav>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">luxaviar的网络日志</a>
+</div>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">归档</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/tags/">标签</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/categories/">分类</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
+</nav>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">渲染中的采样理论</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-05-28 </span>
+        <div class="post-category">
+            <a href="/categories/Rendering/"> Rendering </a>
+            </div>
+        <span id="busuanzi_container_page_pv" class="more-meta"> <span id="busuanzi_value_page_pv"><img src="/img/spinner.svg" alt="spinner.svg"/></span> times read </span>
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#采样定理">采样定理</a></li>
+    <li><a href="#信号重建">信号重建</a>
+      <ul>
+        <li><a href="#频域的观点">频域的观点</a></li>
+        <li><a href="#走样的产生">走样的产生</a></li>
+        <li><a href="#反走样">反走样</a></li>
+        <li><a href="#理解滤波函数">理解滤波函数</a></li>
+      </ul>
+    </li>
+    <li><a href="#纹理映射">纹理映射</a>
+      <ul>
+        <li><a href="#cubic-filter">cubic filter</a></li>
+        <li><a href="#mipmapping">mipmapping</a></li>
+      </ul>
+    </li>
+    <li><a href="#geometric-aliasing">Geometric Aliasing</a></li>
+    <li><a href="#shading-aliasing">Shading Aliasing</a></li>
+    <li><a href="#temporal-aliasing">Temporal Aliasing</a></li>
+    <li><a href="#参考">参考</a></li>
+  </ul>
+</nav>
+  </div>
+</div>
+    <div class="post-content">
+      <h1 id="采样定理">采样定理</h1>
+<p>采样是将一个信号（例如时间或空间上连续的函数）转换为离散序列（时间或空间上离散的函数）的过程。信号可以是任何维度的连续函数，最常见的是一维的声音信号，它可以被表示成时间的函数，在时域处理信号也被称为时域分析；图像也是一种连续信号，处于平面空间域，在平面空间中处理图像信号，被称为空域分析。</p>
+<p>信号也可以用频率来描述，所谓频率可以粗略理解为信号在其原来的域中的变化速度。真实世界中一个信号可以有不止一个频率，而是包含了很多不同的频率，这些频率组成一个频谱。一个信号可以通过<a href="https://en.wikipedia.org/wiki/Fourier_transform" target="_blank" rel="noopener">傅里叶变换</a> 从它的原始表示（时域或空域）转换到它的频谱表示（称为频域），适用于傅里叶变换的函数可以分解为一系列正弦曲线的加权和，正弦函数的频率分布对应于原函数的频率分布。</p>
+<p>下图展示了两个变化率不一样的函数，a变化相对较慢，b较快。
+<figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/change_functions.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> 
+他们在频域的图像如下，其中x轴是频率，y轴是振幅，图表展示了频率的分布情况。
+<figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/frequency_funtions.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p>一旦进入频域，我们就可以确定这个信号是否有一个最高频率（高于此频率的信号强度都为0）。如果有这样一个最高频率，那么称此信号是有限带宽（<code>bandlimited</code>），因此存在一个带宽（<code>bandwidth</code>）。根据奈奎斯特-香农采样定理（<a href="https://en.wikipedia.org/wiki/Nyquist%E2%80%93Shannon_sampling_theorem" target="_blank" rel="noopener">Nyquist–Shannon sampling theorem</a> ），假设信号的最大带宽是B，那么我们的采样频率大于2B的时候就可以根据样本无损还原出原始信号。</p>
+<h1 id="信号重建">信号重建</h1>
+<p>所谓信号重建 （reconstruction）就是从离散的信号样本中，获得原始连续信号函数的近似。有了这个近似，我们就可以在一组新的采样点上对其进行离散采样，也就是重采样（resampling）。还原的过程就是利用局部离散值，计算它们中间的某个近似值，因此也可以说是对样本的插值（interpolation）。</p>
+<p>从奈奎斯特-香农采样定理我们知道，高频信号需要高频采样才能不失真。</p>
+<p><figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/sample.png" alt="image" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p>如上图所示，使用线性插值法，在相同采样频率下，对于低频的<span class="math inline">\(f_1(x)\)</span>，还原效果很接近原函数；而对于频率最高的<span class="math inline">\(f_5(x)\)</span>，还原的结果最差。</p>
+<p>插值所用的函数也称为滤波函数（或者滤波器），信号重建的过程就是对一组离散样本应用某种重建滤波器，得到原始连续信号的近似值。通常这些滤波器是关于<span class="math inline">\(x=0\)</span>对称的函数，并且只在0附近有非零值（一般来说越远的样本对中心样本的影响越少）。</p>
+<p><figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/filters.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p><em>以上分别是<code>box function</code>、<code>tent function</code>和<code>sinc function</code>。</em></p>
+<p>应用滤波器的操作被称为卷积（<code>convolution</code>），本质上就是围绕采样点按权重进行算术加和（插值）。使用上述三种滤波函数对离散采样的信号进行重构的过程如下图所示：</p>
+<p><figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/box_filter.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p><figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/tent_filter.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p><figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/sinc_filter.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p>在所有滤波器中，<code>sinc function</code>最特别，它的频谱是无限的，理论上只要信号被充分采样，它就可以精确地重构原始信号。</p>
+<h2 id="频域的观点">频域的观点</h2>
+<p>根据奈奎斯特-香农采样定理，采样不足的时候我们无法完美重建原信号，要深入了解为何是这样，我们必须从频域的角度去考察采样是怎么一回事。假设一个带宽为B的函数<span class="math inline">\(f\)</span>，它的频域表示如下</p>
+<p><figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/fx.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p>按照采样频率<span class="math inline">\(f_s>2B\)</span>对它进行采样，这些采样对应的信号在频域的表示会是这样的：</p>
+<p><figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/sample_spectrum.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<blockquote>
+<p>采样在频域的表示为何是重复的呢？
+时域采样得到的离散信号并不只代表这个时域信号，而是有无数多个频率不同的信号的采样结果是一样的，也就导致了频域上的周期延拓，这些频谱副本以采样频率的倍数重复。这里有详细的<a href="https://www.projectrhea.org/rhea/index.php/2015_Fall_ECE_438_Boutin_A_visual_explanation_of_aliasing_and_repetition_with_the_DTFT_Erik_Swan" target="_blank" rel="noopener">解释</a> 。</p>
+<p>一句话，采样就是重复原始信号的频谱。<br>
+<figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/repeat_spectrum.png" alt="image" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p>以下两者等价：</p>
+<ol>
+<li>原始信号(a)和冲激函数(c)相乘，得到离散的点(e)。</li>
+<li>(a)的频谱(b)和(c)的傅里叶变换(d)，得到重复的频谱(f)。</li>
+</ol>
+</blockquote>
+<p>所谓信号重建就是要从这无数个频谱副本中选出一个正确的，然后变换到时域的过程。为了排除多出来的频谱副本，只留下原始信号对应的副本，我们可以在频域中应用一个宽度为B的<code>box function</code>，因为超出边框的部分直接为0，于是其他副本的影响就被消除了。
+<figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/hf.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<blockquote>
+<p>从这个角度看，滤波(filtering)就是滤掉特定频率的信息。</p>
+<p>考虑如下原始图像及其频谱图。<br>
+<figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/origin.png" alt="image" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p>过滤低频信息(边缘)<br>
+<figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/high_pass.png" alt="image" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p>过滤高频信息(模糊)<br>
+<figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/low_pass.png" alt="image" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+</blockquote>
+<h2 id="走样的产生">走样的产生</h2>
+<p>而采样不足时，会发生什么情况呢？前面提到，频谱副本以采样倍数的频率出现，于是采样率越高，它们之间的距离越远，采样率越低，它们之间的距离越近。当<span class="math inline">\(f_s<2B\)</span>时，采样得到的信号在频域下的表示是这样的：</p>
+<p><figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/aliasing.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p>也就是频谱副本发生了重叠，这种情况发生之后我们再也无法完美隔离原信号的频谱，因此这种现象被形象地称为“混叠”（<code>Aliasing</code>），结果就是部分高频信号重叠在一起，并形成错误的低频信号。</p>
+<p><figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/aliasing2.png" alt="image" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p>在计算机图形学中，我们从图像的直观表现来理解，<code>Aliasing</code>也称为走样/失真。</p>
+<p>采样不足导致走样的后果就是，我们无法根据样本正确地还原出原始信号。特别的，对于没有有限带宽的信号，无论以多大的频率采样，总是会有走样产生，于是都不可能完美重构原始信号。</p>
+<p>回过头来看3D渲染的整个过程，其实也可以看做是一个关于空间的连续函数，只是它更加复杂，包括场景的几何信息、阴影遮挡、光照、后处理等等，屏幕的像素点是对这个连续信号函数的离散采样，我们寄希望于屏幕显示出来的这些离散的像素点能忠实地还原连续世界的原貌。然而坏消息是，这个复杂的连续函数不是有限带宽函数，于是走样不可避免，而这本质上是一个欠采样的问题。</p>
+<p>欠采样造成的<code>Aliasing</code>被称为<code>prealiasing</code>，因为它发生在重构之前，而重构本身也有可能引入artifacts。想象一下，如果我们在应用重建过滤器时使用一个过宽的<code>box function</code>，结果会是混入本不应存在高频信号：</p>
+<p><figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/postaliasing.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p>滤波器选择不当引入的Aliasing被称为<code>postaliasing</code>。</p>
+<h2 id="反走样">反走样</h2>
+<p>任何修正<code>prealiasing</code>和<code>postaliasing</code>的尝试都被广泛地归类为反走样，反走样技术大体分为三类。</p>
+<p><strong>非均匀采样(Nonuniform Sampling)</strong></p>
+<p>虽然图像函数具有无限带宽，因此不能从离散样本完全重建，但是通过以不均匀的方式改变样本之间的间距可以减少<code>Aliasing</code>的视觉影响。</p>
+<p>对于不足以捕获原始信号函数的固定采样频率，均匀采样和非均匀采样都会产生不正确的重构信号。然而，非均匀采样倾向于将常规的<code>Aliasing</code>转化为噪声，这对人类视觉系统的干扰较小。在频域中，采样频谱的副本最终也是随机移动的，因此重构时的结果是一种随机误差而不是混叠。</p>
+<p><strong>自适应采样(Adaptive Sampling)</strong></p>
+<p>另一种反走样的方法是自适应超采样：如果我们能够识别出频率高于奈奎斯特极限的信号区域，我们就可以在这些区域采样额外的样本，而不是在任何地方都增加采样的计算开销。在实践中这种方法很难很好地工作，因为很难找到所有需要超采样的地方。大多数这样做的技术是基于检查相邻的样本值，并找到两者之间值有显著变化的地方，从而假设信号在该区域有高频率。</p>
+<p>一般来说，相邻的样本值不能确切地告诉我们它们之间是否存在高频变化：即使这些值是相同的，函数也有可能在这些值之间存在巨大的变化。或者反之，即便相邻的样本实际上就是不同的值，但也并不意味着一定会发生<code>Aliasing</code>。</p>
+<p><strong>预滤波(Prefiltering)</strong></p>
+<p>另一种消除<code>Aliasing</code>的方法是滤波(即模糊)原始函数，消除给定采样率下无法被正确捕获的那些高频信号。这个方法在纹理采样中得到广泛的应用，虽然这种技术通过去除信息来改变被采样函数的特性，但模糊通常不如<code>Aliasing</code>那么令人反感。</p>
+<h2 id="理解滤波函数">理解滤波函数</h2>
+<p>当然在现实中，我们不会在频域进行滤波，而是在时域(或空域)，这意味着我们需要频域的<code>box function</code>在时域(或空域)的等价物，以下是几组时域滤波函数和它在频域的等价函数：</p>
+<p><figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/box_to_sinc.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p><em>Box Function -&gt; Sinc Function</em></p>
+<p><figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/tent_to_sinc.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p><em>Tent Function -&gt; (Sinc Function)^2</em></p>
+<p><figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/gaussian.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p><em>Gaussian Function -&gt; Gaussian Function</em></p>
+<p><figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/sinc2_to_tent.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p><em>(Sinc Function)^2 -&gt; Tent Function</em></p>
+<p><figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/sinc_to_box.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p><em>Sinc Function -&gt; Box Function</em></p>
+<p>通过观察空域滤波函数在频域的等价函数，我们可以大致了解它将如何保持我们感兴趣的频率范围，并过滤掉无关的频谱副本。滤波器的设计主要是分析滤波器的频域谱，并用频域谱来评估或估计滤波器的整体性能。从上述图像我们可以看到，非<code>sinc function</code>都会以某种方式衰减基带频率，而频域的等价函数在频域上没有最大值，这意味着频域上的周期延拓会不可避免地渗入到重构的信号中（因为周期延拓是无限的），从而导致<code>Aliasing</code>。</p>
+<p>通过观察空域滤波函数及其频域等价函数的图形，我们可以观察到一个普遍的模式，即二者的变化率存在着反比关系。考虑一下空域的<code>box function</code>，它在某个值处不连续，从而导致无限的变化率，因此它的频域等价函数是<code>sinc function</code>，后者延伸到整个x轴，这就是<code>box function</code>的不连续性带来的无限变化率（高频）。同样，空域的 <code>sinc function</code>相当于频域的<code>box function</code>，因为它们之间的关系是互为倒数。高斯函数是一个特例，其中空域和频域的等价函数是一样的。由于这个原因，高斯函数代表了在空域和频域中处于缓慢变化和急剧变化的函数中间的一个折中（中庸函数）。</p>
+<blockquote>
+<p>由于这种相反的关系，在时域做卷积等价于在频域做乘法。
+两种做法：</p>
+<ul>
+<li>选项1：在时域做卷积</li>
+<li>选项2
+<ol>
+<li>变换到频域（傅里叶变换）</li>
+<li>乘以卷积核的傅里叶变换形式</li>
+<li>变换回时域（逆傅里叶变换）<br>
+<figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/transform.png" alt="image" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </li>
+</ol>
+</li>
+</ul>
+</blockquote>
+<p>空域和频域的这种互为相反的关系带来了一个重要的特性，我们可以通过让滤波函数更宽，使得该函数得到的频谱更窄（直观理解就是时域中变化越平缓，频域中高频部分越少）。作为一个例子，看一下1.0宽度和4.0宽度的<code>box function</code>在频域下的区别：</p>
+<p><figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/box1.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> <br>
+<em>Frequency spectrum of a box function with width of 1.0</em></p>
+<p><figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/box4.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> <br>
+<em>Frequency spectrum of a box function with width of 4.0</em></p>
+<p>滤波器设计的一个难点是，我们不仅要考虑滤波器的频域表示，还要考虑其空域表示对重构信号的影响。特别是，我们必须小心使用具有负波瓣的滤波器，例如 <code>sinc filter</code>。这样的滤波器在应用于尖锐的不连续性时可以产生<a href="https://en.wikipedia.org/wiki/Ringing_artifacts" target="_blank" rel="noopener">ringing atrifact</a> （也称为<em>Gibb‘s</em>现象），即重建的信号在被采样的信号周围振荡。</p>
+<h1 id="纹理映射">纹理映射</h1>
+<p>采样理论一个最直观的应用就是图像缩放。图像或位图，是在二维网格上均匀分布的离散像素点对颜色信号进行采样的结果。为了缩放图像，我们需要在不同于原图像的采样点重新计算一个新的颜色。这个过程就是前面提到的重采样，或者说插值。最常见的插值模式是point（<code>nearest-neighbor</code>）和linear（<code>bilinear</code>），两种模式的背后都是应用了某种重建滤波器，point模式使用<code>box function</code>，bilinear模式使用<code>tent function</code>。</p>
+<p><figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/texture_filtering.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p><code>box function</code>的频域等效函数(<code>sinc function</code>)比<code>tent function</code>的频域等效函数(<span class="math inline">\(sinc^2 \space function\)</span>)更平滑、更宽，这导致了更多的<code>postaliasing</code>。</p>
+<h2 id="cubic-filter">cubic filter</h2>
+<p>在3D渲染领域，缩放图像时也常用<code>cubic filter</code>（或者说<code>bicubic filters</code>）。<code>cubic filter</code>不是一个单一的滤波函数，而是包含了一组3次多项式插值滤波函数族。这些3次样条函数的特殊之处在于它们是<span class="math inline">\(C^1\)</span>连续的，因此也是<span class="math inline">\(C^0\)</span>连续的，作为平滑的连续函数，它们有利于减少<code>postaliasing</code>。另外，它们在过了某一点之后是0值，因此卷积的范围是有限的，通常<code>cubic filter</code>是在<span class="math inline">\([-2,2]\)</span>范围定义的函数，这是<code>tent function</code>的两倍宽度。最后，它们是在两个维度的卷积是可以分离计算的，因此减少了卷积需要采样的样本数，提高了性能。</p>
+<p>在1988年这这篇论文<a href="http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.99.6947&amp;rep=rep1&amp;type=pdf" target="_blank" rel="noopener">Reconstruction Filters in Computer Graphics</a> 中，Don Mitchell 和 Arun Netravali 系统地研究了<code>cubic filter</code>，并给出了基于两个参数B和C的广义定义形式。个函数族产生的滤波函数总是 <span class="math inline">\(C^1\)</span>连续的，并且被归一化，使得曲线下面积等于1。</p>
+<p><figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/cubic_function.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p>以下是一些常见的3次曲线图：
+<figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/curves.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> <br>
+<em>分别是：cubic(1, 0) AKA cubic B-spline, cubic(1/3, 1/3) AKA Mitchell filter, cubic(0, 0.75) AKA Photoshop bicubic filter, and cubic(0, 0.5) AKA Catmull-Rom spline</em></p>
+<p>使用这些函数对前面的棋盘图进行放大的效果如下：</p>
+<p><figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/magnification.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p>Mitchell论文中提到的一个关键点是，<code>sinc function</code>通常不适用于图像缩放，因为从本质上讲，图像的像素结构（离散值）会导致不连续性，从而导致无界频率。因此，理想的重建是不可能的，而且由于 <code>Gibb’s</code>现象，<code>ringing artifacts</code>将会发生。还有另外三种使用立方滤波器可能产生的负面效应是：<strong>混叠</strong>、<strong>模糊</strong>和<strong>各向异性</strong>。模糊被认为是由于高频衰减过多而造成的细节损失，通常是由于过宽的滤波器核引起；各向异性效应是由于将函数作为一个可分离的滤波器应用而产生的artifacts，其中得到的二维滤波函数最终并不是径向对称的。</p>
+<p>Mitchell认为，单纯聚焦于频域不足以设计出一个良好的滤波器以产生符合人眼主观直觉的重建信号，而是强调在之前提到的4种artifacts中进行权衡取舍，而非仅关注<code>postaliasing</code>的量，只有这样才能设计一个高质量的滤波器用于图像缩放。</p>
+<p>最终，Mitchell将B和C参数的范围划分为他所谓的“regions of dominant subjective behavior”。在他的论文中，包括了下面的图表，显示了哪些artifacts与B和C参数的取值范围有关:</p>
+<p><figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/cubic_area.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p>根据他的分析，Mitchell确定(1/3,1/3)产生了最高质量的结果。由于这个原因，通常将这个函数称为<code>Mitchell filter</code>。</p>
+<h2 id="mipmapping">mipmapping</h2>
+<p>3D渲染经常会采样纹理然后在屏幕显示出来，但这些纹理不一定还保持原来的大小（像素数），而是经常被缩放、旋转以及投影，如何显示这些纹理在屏幕上占据的像素就是一个重采样问题。纹理采样最常见的滤波器是<code>linear filter</code>，当降采样时（缩小），源图像的高频信息会泄漏到降采样的版本中，表现为<code>temporal artifacts</code>：随着相机移动，纹理的内容会出现闪烁。在图像处理中，这个问题可以通过加大滤波器宽度来解决。但对于实时渲染来说，滤波器宽度增大带来的后果是，要访问的临近像素数量也会增大(<span class="math inline">\(O(N^2)\)</span>)，于是为了性能，我们选择了另外一条道路：mipmapping。</p>
+<p>mipmaps由一系列预滤波的纹理组成，这些纹理被一个足够宽的能够防止降采样<code>Aliasing</code>的滤波核所采样，每个后续的mipmap是前一个mimap的一半宽度和高度，如下图所示。</p>
+<p><figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/mipmaps.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p>在运行时像素着色器通过计算纹理坐标的梯度，来选择一个合适的mipmap等级。梯度越小，说明样本挨得越近，因此需要较高的采样率，反之则需要较低的采样率。</p>
+<blockquote>
+<p><code>mipmap level</code>需要在屏幕空间计算纹理坐标相对于x和y的导数，即相邻像素之间对应纹素的差距。计算过程是将屏幕坐标的点映射到uv平面上，然后计算出距离。取出最大的一个距离L，并计算<span class="math inline">\(log_2L\)</span>作为level，原图是0级，后面是1级，以此类推。<br>
+<figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/mipmap_level.png" alt="image" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<ol>
+<li>考察相邻的纹理坐标，计算它们的距离。<br>
+<span class="math inline">\(\frac {du} {dx}=u_{10}-u_{00}\)</span>  <span class="math inline">\(\frac {dv} {dx}=v_{10}-v_{00}\)</span><br>
+<span class="math inline">\(\frac {du} {dy}=u_{01}-u_{00}\)</span>  <span class="math inline">\(\frac {dv} {dy}=v_{01}-v_{00}\)</span><br>
+<figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/mipmap_level2.png" alt="image" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </li>
+<li>任取垂直或者水平的最大距离，取<span class="math inline">\(log_2\)</span>就得到了mipmap层级。</li>
+</ol>
+<p>其含义就是如果uv平面中采样点离的很远，相应的<span class="math inline">\(\frac {du} {dx}\)</span>或其他的梯度就比较大，<span class="math inline">\(L\)</span>也相应的比较大。这种情况说明Minification了，单个像素覆盖了多个纹素。于是一个高级别的mipmap(更模糊的）就可以用来消除Aliasing，因为高级的单个纹素包括了低级的多个纹素（高频信息）。</p>
+<ol start="3">
+<li>然后就可以根据Lod level进行三线性插值，在两个mipmap层级间插值<br>
+<figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/mipmap_filter.png" alt="image" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </li>
+</ol>
+<p>另外，为了自动获得梯度值，3D硬件总是以2x2像素(<code>quad-fragments</code>)为一组并行计算。<br>
+<figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/quad_fragment.png" alt="image" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+</blockquote>
+<p>使用 <code>mipmapping</code> 并不能解决全部问题，还有一个常见问题是，当一个图像在一个维度中比在另一个维度中缩小更多时怎么办？这种情况被称为各向异性，因为纹理的 u 轴和 v 轴采样率不同。当一个轴的梯度大于另一个轴的梯度时，3D硬件将使用较大的梯度作为 <code>mip level</code>，因为很显然，使用较小的梯度会由于欠采样而导致<code>Aliasing</code>，但对另外一个轴来说会有<code>over-filtering</code>的问题导致模糊。为了缓解这个问题，图形硬件支持各向异性异性采滤波（ <code>anisotropic filtering</code>）。当这个模式被激活时，硬件将沿着更大的梯度轴采样一定数量的“额外”纹理样本。</p>
+<blockquote>
+<p>各项异性采样在普通的mipmap计算基础上，还要考虑对角线的距离。</p>
+</blockquote>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="n">diag0</span> <span class="o">=</span> <span class="p">(</span><span class="n">ddx</span> <span class="o">-</span> <span class="n">ddy</span><span class="p">).</span><span class="n">length</span><span class="p">;</span>
+<span class="n">diag1</span> <span class="o">=</span> <span class="p">(</span><span class="n">ddx</span> <span class="o">+</span> <span class="n">ddy</span><span class="p">).</span><span class="n">length</span><span class="p">;</span>
+
+<span class="n">long_axis</span> <span class="o">=</span> <span class="n">max</span><span class="p">(</span><span class="n">ddx</span><span class="p">,</span> <span class="n">ddy</span><span class="p">,</span> <span class="n">diag0</span><span class="p">,</span> <span class="n">diag1</span><span class="p">);</span>
+<span class="n">minor_axis</span> <span class="o">=</span> <span class="n">min</span><span class="p">(</span><span class="n">ddx</span><span class="p">,</span> <span class="n">ddy</span><span class="p">,</span> <span class="n">diag0</span><span class="p">,</span> <span class="n">diag1</span><span class="p">);</span>
+<span class="n">ratio</span> <span class="o">=</span> <span class="n">long_axis</span> <span class="o">/</span> <span class="n">minor_axis</span><span class="p">;</span>
+<span class="n">lod</span> <span class="o">=</span> <span class="n">log2</span><span class="p">(</span><span class="n">minor_axis</span><span class="p">);</span>
+</code></pre></td></tr></table>
+</div>
+</div><blockquote>
+<p>按照长轴方向，采样ratio次，再累加平均。</p>
+</blockquote>
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span></code></pre></td>
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-cpp" data-lang="cpp"><span class="n">color</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="n">uv_i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="n">long_axis_step</span> <span class="o">=</span> <span class="n">long_axis</span> <span class="o">/</span> <span class="n">ratio</span><span class="p">;</span>
+<span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">ratio</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">uv_i</span> <span class="o">+=</span> <span class="n">pixel</span><span class="p">.</span><span class="n">uv</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="n">long_axis_step</span><span class="p">;</span>
+    <span class="n">color</span> <span class="o">+=</span> <span class="n">tex</span><span class="p">.</span><span class="n">SampleLevel</span><span class="p">(</span><span class="n">lod</span><span class="p">,</span> <span class="n">uv_i</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="n">color</span> <span class="o">/=</span> <span class="n">ratio</span><span class="p">;</span>
+</code></pre></td></tr></table>
+</div>
+</div><h1 id="geometric-aliasing">Geometric Aliasing</h1>
+<p>3D渲染中的第二种类型的<code>Aliasing</code>是几何走样，当一个由三角形组成的三维场景被栅格化时，这些三角形的可见性采样是像素离散化的。三角形可见性就像其他信号一样，当采样率不足时(在这种情况下，采样率由屏幕分辨率决定) ，重构信号会产生<code>Aliasing</code>。不幸的是，三角形数据总是有不连续性，这意味着信号永远不会受到带宽限制，因此没有采样率可以足够高来防止走样。在实践中，这些artifacts表现为常见的锯齿状线条（简称“锯齿”），所谓抗锯齿指的就是这个问题。</p>
+<p><figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/jaggies.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p>既然锯齿来源于欠采样，那么加大采样率就可以解决这个问题，这相当于渲染的分辨率高于输出分辨率，然后再将渲染结果缩小到显示大小，这个方法被称为超级采样抗锯齿（<code>Supersampling Anti-Aliasing</code>，简称SSAA）。不过这个方法性能代价非常大，想象一下当今的3A游戏，中端甜点卡能在1080p分辨率下满特效流畅运行，而如果想在2160p下流畅运行，那么最高端的显卡也可能非常吃力。因此，一个简化版的SSAA被发明了出来，这就是多重采样抗锯齿（<code>MultiSampling Anti-Aliasing</code>，简称MSAA）。</p>
+<h1 id="shading-aliasing">Shading Aliasing</h1>
+<p>第三种类型的<code>Aliasing</code>被称为着色走样（<code>shading aliasing</code>），因为着色器是逐像素运行的，并且采样率固定（屏幕大小）。虽然着色器运行的程序可以是基于数学的平滑连续函数的解析解，但是采样却是离散的。最常见的一种欠采样是低粗糙度表面的镜面高光，较低的粗糙值导致较窄的波瓣，这使镜面高光成为高频信号，因此更容易欠采样，表现出来就是高光闪烁。</p>
+<p>下面的图像包含了不同粗糙度的 <code>Blinn-Phong BRDF</code> 的 <span class="math inline">\(N \cdot H\)</span>（法线和半角向量的点积）响应图，展示了了它在低粗糙度下变得更高的频率:</p>
+<p><figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/ndoth.png" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p>着色走样最有可能发生在法线贴图使用时，因为它为法线带来了高频表现，从而导致镜面高光在表面上迅速变化。HDR 渲染和基于物理的渲染模型可以进一步加剧这个问题，因为它们允许的亮度值范围更大。着色走样可能是最难解决的一种走样，目前为止还没有银弹解决方案，除了SSAA，但代价高昂。MSAA对此毫无帮助，因为像素着色采样率实际并没有增加。</p>
+<h1 id="temporal-aliasing">Temporal Aliasing</h1>
+<p>到目前为止，我们已经讨论了渲染中2D图像信号的采样。然而，我们还需要关注第三个维度，也就是时间。我们渲染的结果随着时间流逝表现为一个动画视频，也就说我们其实也在时域中进行采样，因为图像信号会随着时间的推移而完全改变。因此，我们必须考虑沿时间维度采样的问题，以及它如何产生走样。</p>
+<p>在视频的情况下，我们仍然使用离散的样本，其中每个样本是一个代表某个时刻的场景的2D图像。这种采样与我们在空域的采样类似： 我们采样的信号有一定的频率，如果我们采样不足，走样就会发生。时间走样的一个典型例子是所谓的”<a href="https://en.wikipedia.org/wiki/Wagon-wheel_effect" target="_blank" rel="noopener">车轮效应</a> ”，是指在采样不足的视频流中，旋转的车轮转动看起来似乎较慢(甚至向后)的现象。</p>
+<p><figure>
+  <img src="/images/20220528-%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e9%87%87%e6%a0%b7%e7%90%86%e8%ae%ba/wagonwheeleffect.gif" alt="" />
+  <figcaption><center><h4></h4></center></figcaption>
+</figure> </p>
+<p>在游戏中，时间采样的artifacts通常表现为“断断续续”的动作和动画。帧率的增加相当于沿时域采样率的增加，这样可以更好地采样移动更快的内容。</p>
+<p>时间走样最常用的反走样技术是运动模糊。运动模糊实际上是指一种摄影技术造成的效果，这是由于相机的快门打开后不马上关闭，而是刻意停留了一段时间，于是这段时间累积的光线都被记录了下来，如果有物体在运动，表现的结果就是模糊。</p>
+<p>在3D 渲染中，默认情况下我们得到的图像代表一个无限小的时刻。为了准确地模拟这种效果，我们可以在时域上进行超采样，通过渲染多帧，并对多帧图像进行滤波得到结果，当然这种做法需要对场景进行多次渲染才输出一帧，代价堪比SSAA。因此我们往往采用后处理方案来达到近似的效果：为当前帧产生每像素的速度缓冲，然后使用来自附近像素的多个纹理样本执行模糊操作，近似达到过采样的结果。这种做法的一个明显的artifact来源于几何遮挡信息的丢失，因为我们实际上还是在采样一个静态的画面，真正运动的画面，其几何遮挡信息是每时每刻都在变化的。</p>
+<h1 id="参考">参考</h1>
+<ol>
+<li><a href="http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.99.6947&amp;rep=rep1&amp;type=pdf" target="_blank" rel="noopener">Reconstruction Filters in Computer Graphics</a> </li>
+<li><a href="https://mynameismjp.wordpress.com/2012/10/15/signal-processing-primer/" target="_blank" rel="noopener">SIGNAL PROCESSING PRIMER</a> </li>
+<li><a href="https://mynameismjp.wordpress.com/2012/10/21/applying-sampling-theory-to-real-time-graphics/" target="_blank" rel="noopener">APPLYING SAMPLING THEORY TO REAL-TIME GRAPHICS</a> </li>
+<li><a href="https://pbr-book.org/3ed-2018/Sampling_and_Reconstruction/Sampling_Theory" target="_blank" rel="noopener">Sampling Theory</a> </li>
+<li><a href="https://en.wikipedia.org/wiki/Nyquist%E2%80%93Shannon_sampling_theorem" target="_blank" rel="noopener">Nyquist–Shannon sampling theorem</a> </li>
+</ol>
+
+    </div>
+
+    <div class="post-copyright">
+  <p class="copyright-item">
+    <span class="item-title">Author</span>
+    <span class="item-content">luxaviar</span>
+  </p>
+  <p class="copyright-item">
+    <span class="item-title">LastMod</span>
+    <span class="item-content">
+        2022-05-28
+        
+    </span>
+  </p>
+  
+  <p class="copyright-item">
+    <span class="item-title">License</span>
+    <span class="item-content"><a rel="license noopener" href="https://creativecommons.org/licenses/by-nc/4.0/deed.en" target="_blank">知识共享署名-非商业性使用 4.0 国际许可协议</a></span>
+  </p>
+</div>
+<footer class="post-footer">
+      <div class="post-tags">
+          <a href="/tags/Rendering/">Rendering</a>
+          <a href="/tags/Math/">Math</a>
+          </div>
+      <nav class="post-nav">
+        
+        <a class="next" href="/post/20220404-%E5%88%9A%E4%BD%93%E7%89%A9%E7%90%86%E5%BC%95%E6%93%8E%E5%AE%9E%E7%8E%B0%E4%B9%8B%E7%BA%A6%E6%9D%9F%E7%AE%97%E8%A7%A3/">
+            <span class="next-text nav-default">刚体物理引擎实现之约束算解</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+      <a href="https://github.com/luxaviar" class="iconfont icon-github" title="github"></a>
+  <a href="https://luxaviar.github.io/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
+</div>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  <div class="busuanzi-footer">
+    <span id="busuanzi_container_site_pv"> site pv: <span id="busuanzi_value_site_pv"><img src="/img/spinner.svg" alt="spinner.svg"/></span> </span>
+      <span class="division">|</span>
+    <span id="busuanzi_container_site_uv"> site uv: <span id="busuanzi_value_site_uv"><img src="/img/spinner.svg" alt="spinner.svg"/></span> </span>
+  </div>
+
+  <span class="copyright-year">
+    &copy; 
+    2020 - 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>luxaviar</span>
+  </span>
+</div>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://unpkg.com/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script>
+
+
+
+<script type="text/javascript" src="/js/main.min.c99b103c33d1539acf3025e1913697534542c4a5aa5af0ccc20475ed2863603b.js"></script>
+  <script type="text/javascript">
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$','$'], ['\\(','\\)']],
+        }
+    };
+  </script>
+  <script async src="https://unpkg.com/mathjax@3.0.5/es5/tex-mml-chtml.js" integrity="sha256-HGLuEfFcsUJGhvB8cQ8nr0gai9EucOOaIxFw7qxmd+w=" crossorigin="anonymous"></script>
+
+
+
+
+
+
+
+
+</body>
+</html>

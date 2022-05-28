@@ -36,7 +36,7 @@
 <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 
 <link href="/sass/main.min.f92fd13721ddf72129410fd8250e73152cc6f2438082b6c0208dc24ee7c13fc4.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+<link rel="stylesheet" href="https://unpkg.com/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
 
 
 <meta property="og:title" content="刚体物理引擎实现之碰撞检测" />
@@ -50,7 +50,7 @@
 <meta itemprop="description" content="GJK GJK（Gilbert-Johnson-Keerthi）是一个简洁优雅的算法，用来判断两个凸几何体之间是否发生碰撞，现代物理引擎基本都采用"><meta itemprop="datePublished" content="2022-04-03T13:59:51+08:00" />
 <meta itemprop="dateModified" content="2022-04-03T13:59:51+08:00" />
 <meta itemprop="wordCount" content="5289">
-<meta itemprop="keywords" content="" /><meta name="twitter:card" content="summary"/>
+<meta itemprop="keywords" content="Math,Algorithm,Physics," /><meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="刚体物理引擎实现之碰撞检测"/>
 <meta name="twitter:description" content="GJK GJK（Gilbert-Johnson-Keerthi）是一个简洁优雅的算法，用来判断两个凸几何体之间是否发生碰撞，现代物理引擎基本都采用"/>
 
@@ -59,8 +59,8 @@
 <![endif]-->
 
 <!--[if lt IE 9]>
-  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+  <script src="https://unpkg.com/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://unpkg.com/respond.js@1.4.2/dest/respond.min.js"></script>
 <![endif]-->
 
 </head>
@@ -134,8 +134,6 @@
       <div class="post-meta">
         <span class="post-time"> 2022-04-03 </span>
         <div class="post-category">
-            <a href="/categories/Math/"> Math </a>
-            <a href="/categories/Algorithm/"> Algorithm </a>
             <a href="/categories/Physics/"> Physics </a>
             </div>
         <span id="busuanzi_container_page_pv" class="more-meta"> <span id="busuanzi_value_page_pv"><img src="/img/spinner.svg" alt="spinner.svg"/></span> times read </span>
@@ -397,7 +395,11 @@ A \ominus B &= A \oplus {-B}
   </p>
 </div>
 <footer class="post-footer">
-      
+      <div class="post-tags">
+          <a href="/tags/Math/">Math</a>
+          <a href="/tags/Algorithm/">Algorithm</a>
+          <a href="/tags/Physics/">Physics</a>
+          </div>
       <nav class="post-nav">
         <a class="prev" href="/post/20220404-%E5%88%9A%E4%BD%93%E7%89%A9%E7%90%86%E5%BC%95%E6%93%8E%E5%AE%9E%E7%8E%B0%E4%B9%8B%E5%88%9A%E4%BD%93%E5%8A%A8%E5%8A%9B%E5%AD%A6/">
             <i class="iconfont icon-left"></i>
@@ -458,9 +460,9 @@ A \ominus B &= A \oplus {-B}
     </div>
   </div>
   
-  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script>
 
 
 
@@ -472,7 +474,7 @@ A \ominus B &= A \oplus {-B}
         }
     };
   </script>
-  <script async src="https://cdn.jsdelivr.net/npm/mathjax@3.0.5/es5/tex-mml-chtml.js" integrity="sha256-HGLuEfFcsUJGhvB8cQ8nr0gai9EucOOaIxFw7qxmd+w=" crossorigin="anonymous"></script>
+  <script async src="https://unpkg.com/mathjax@3.0.5/es5/tex-mml-chtml.js" integrity="sha256-HGLuEfFcsUJGhvB8cQ8nr0gai9EucOOaIxFw7qxmd+w=" crossorigin="anonymous"></script>
 
 
 

@@ -5,22 +5,13 @@
     <link>https://luxaviar.github.io/categories/</link>
     <description>Recent content in Categories on Luxaviar&#39;s Blog</description>
     <generator>Hugo -- gohugo.io</generator>
-    <lastBuildDate>Mon, 04 Apr 2022 16:08:20 +0800</lastBuildDate><atom:link href="https://luxaviar.github.io/categories/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sat, 28 May 2022 17:03:42 +0800</lastBuildDate><atom:link href="https://luxaviar.github.io/categories/index.xml" rel="self" type="application/rss+xml" />
     <item>
-      <title>Algorithm</title>
-      <link>https://luxaviar.github.io/categories/Algorithm/</link>
-      <pubDate>Mon, 04 Apr 2022 16:08:20 +0800</pubDate>
+      <title>Rendering</title>
+      <link>https://luxaviar.github.io/categories/Rendering/</link>
+      <pubDate>Sat, 28 May 2022 17:03:42 +0800</pubDate>
       
-      <guid>https://luxaviar.github.io/categories/Algorithm/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>Math</title>
-      <link>https://luxaviar.github.io/categories/Math/</link>
-      <pubDate>Mon, 04 Apr 2022 16:08:20 +0800</pubDate>
-      
-      <guid>https://luxaviar.github.io/categories/Math/</guid>
+      <guid>https://luxaviar.github.io/categories/Rendering/</guid>
       <description></description>
     </item>
     
@@ -39,6 +30,15 @@
       <pubDate>Sat, 19 Mar 2022 19:49:01 +0800</pubDate>
       
       <guid>https://luxaviar.github.io/categories/Programming/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Math</title>
+      <link>https://luxaviar.github.io/categories/Math/</link>
+      <pubDate>Sun, 24 Oct 2021 17:52:17 +0800</pubDate>
+      
+      <guid>https://luxaviar.github.io/categories/Math/</guid>
       <description></description>
     </item>
     
