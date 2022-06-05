@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
 
 
-<meta name="author" content="luxaviar" /><meta name="description" content="原理 如上一篇文章所述，在实时渲染中走样不可避免，虽然SSAA能同时解决着色和几何走样，但由于高昂的性能开销注定无法成为主流，于是各种Anti" /><meta name="keywords" content="rendering, anti-aliasing, MSAA" />
+<meta name="author" content="luxaviar" /><meta name="description" content="原理 如上一篇文章 所述，在实时渲染中走样不可避免，虽然SSAA能同时解决着色和几何走样，但由于高昂的性能开销注定无法成为主流，于是各种Anti" /><meta name="keywords" content="rendering, anti-aliasing, MSAA" />
 
 
 
@@ -40,19 +40,19 @@
 
 
 <meta property="og:title" content="实时渲染中的反走样：MSAA" />
-<meta property="og:description" content="原理 如上一篇文章所述，在实时渲染中走样不可避免，虽然SSAA能同时解决着色和几何走样，但由于高昂的性能开销注定无法成为主流，于是各种Anti" />
+<meta property="og:description" content="原理 如上一篇文章 所述，在实时渲染中走样不可避免，虽然SSAA能同时解决着色和几何走样，但由于高昂的性能开销注定无法成为主流，于是各种Anti" />
 <meta property="og:type" content="article" />
 <meta property="og:url" content="https://luxaviar.github.io/post/20220529-%E5%AE%9E%E6%97%B6%E6%B8%B2%E6%9F%93%E4%B8%AD%E7%9A%84%E5%8F%8D%E8%B5%B0%E6%A0%B7MSAA/" /><meta property="article:section" content="post" />
 <meta property="article:published_time" content="2022-05-29T18:50:19+08:00" />
 <meta property="article:modified_time" content="2022-05-29T18:50:19+08:00" />
 
 <meta itemprop="name" content="实时渲染中的反走样：MSAA">
-<meta itemprop="description" content="原理 如上一篇文章所述，在实时渲染中走样不可避免，虽然SSAA能同时解决着色和几何走样，但由于高昂的性能开销注定无法成为主流，于是各种Anti"><meta itemprop="datePublished" content="2022-05-29T18:50:19+08:00" />
+<meta itemprop="description" content="原理 如上一篇文章 所述，在实时渲染中走样不可避免，虽然SSAA能同时解决着色和几何走样，但由于高昂的性能开销注定无法成为主流，于是各种Anti"><meta itemprop="datePublished" content="2022-05-29T18:50:19+08:00" />
 <meta itemprop="dateModified" content="2022-05-29T18:50:19+08:00" />
-<meta itemprop="wordCount" content="3543">
+<meta itemprop="wordCount" content="3660">
 <meta itemprop="keywords" content="Rendering," /><meta name="twitter:card" content="summary"/>
 <meta name="twitter:title" content="实时渲染中的反走样：MSAA"/>
-<meta name="twitter:description" content="原理 如上一篇文章所述，在实时渲染中走样不可避免，虽然SSAA能同时解决着色和几何走样，但由于高昂的性能开销注定无法成为主流，于是各种Anti"/>
+<meta name="twitter:description" content="原理 如上一篇文章 所述，在实时渲染中走样不可避免，虽然SSAA能同时解决着色和几何走样，但由于高昂的性能开销注定无法成为主流，于是各种Anti"/>
 
 <!--[if lte IE 9]>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
@@ -158,7 +158,7 @@
 </div>
     <div class="post-content">
       <h1 id="原理">原理</h1>
-<p>如上一篇文章所述，在实时渲染中走样不可避免，虽然SSAA能同时解决着色和几何走样，但由于高昂的性能开销注定无法成为主流，于是各种<code>Anti-Aliasing</code>（反走样）技术应运而生。</p>
+<p>如上一篇<a href="https://luxaviar.github.io/post/20220528-%E6%B8%B2%E6%9F%93%E4%B8%AD%E7%9A%84%E9%87%87%E6%A0%B7%E7%90%86%E8%AE%BA/" target="_blank" rel="noopener">文章</a> 所述，在实时渲染中走样不可避免，虽然SSAA能同时解决着色和几何走样，但由于高昂的性能开销注定无法成为主流，于是各种<code>Anti-Aliasing</code>（反走样）技术应运而生。</p>
 <p>早期的渲染由于技术限制，比如简单的Phong模型，着色结果基本依赖于纹理采样，而后者引入的走样已经由mipmap较好地解决了，因此着色走样并不是主要问题。相反，由于低下的屏幕分辨率，几何走样的artifact更为凸显，于是MSAA被发明了出来以解燃眉之急。</p>
 <p>决定几何图元（三角形）是否显示在屏幕上，取决于两个因素：覆盖（<em>coverage</em>）和遮挡（<em>occlusion</em>）。覆盖由图元是否包含了某个屏幕像素的几何中心来决定：</p>
 <p><figure>
@@ -184,7 +184,7 @@
   <img src="/images/20220529-%e5%ae%9e%e6%97%b6%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e5%8f%8d%e8%b5%b0%e6%a0%b7MSAA/subsample.png" alt="" />
   <figcaption><center><h4></h4></center></figcaption>
 </figure> </p>
-<p>如果多个图元占据了同一像素的不同子样本，那么着色器依然会计算多次，但这种情况较少发生（只在图元边缘），可以认为着色器的开销被降低到基本和原分辨率一致。</p>
+<p>如果多个图元占据了同一像素的不同子样本，那么着色器依然会计算多次。这种情况只在图元边缘发生，虽然总体着色开销依然要高于原始分辨率下的渲染，但却大大低于SSAA（考虑到屏幕中边缘区域是不断变化的，MSAA的实际性能开销并不是一个恒定值）。</p>
 <p><figure>
   <img src="/images/20220529-%e5%ae%9e%e6%97%b6%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e5%8f%8d%e8%b5%b0%e6%a0%b7MSAA/subsample2.png" alt="" />
   <figcaption><center><h4></h4></center></figcaption>
@@ -231,12 +231,12 @@
 <p>总体来讲，MSAA并不适合延迟渲染。首先MSAA是解决几何走样的问题，而延迟渲染在光照阶段就已经丢失了几何信息（只是一个后处理），因此在此阶段开启MSAA毫无意义。其次，在GBuffer阶段，对深度、法线这些信息Resolve毫无意义，因为加权后光照和单独光照后再加权的结果并不一致。</p>
 <p>基于以上原因，唯一正确的做法只能是GBuffer必须带着这些子样本进入光照阶段，然后为每个子样本进行光照计算，最后Resolve，但这么做显然代价太大，首先GBuffer膨胀为N倍（取决于子样本数量，而且MRT也要支持Multisample），其次着色计算开销也膨胀为N倍。考虑到MSAA其实只对三角形边缘起作用，一种改进方案是先标记出像素属于三角形内部还是边缘（使用一个模板缓冲），然后只在边缘进行多个子样本的着色计算，具体可以参考<a href="https://diaryofagraphicsprogrammer.blogspot.com/2009/06/multisample-anti-aliasing.html" target="_blank" rel="noopener">这里</a> 。</p>
 <h1 id="alpha-to-coverage">Alpha-To-Coverage</h1>
-<p>在渲染基于mask的透明物体时（镂空），一般有两种做法：Alpha Test和Alpha Blend，前者边缘容易引入锯齿，后者可以有平滑的边缘，但要得到正确结果需要正确的顺序。而基于MSAA的<code>Alpha-To-Coverage</code>不仅可以有平滑的边缘，而且也不依赖半透排序，具体做法可以参考<a href="https://bgolus.medium.com/anti-aliased-alpha-test-the-esoteric-alpha-to-coverage-8b177335ae4f" target="_blank" rel="noopener">这里</a> 。</p>
+<p>在渲染基于mask的透明物体时（镂空），一般有两种做法：Alpha Test和Alpha Blend，前者在镂空的边缘容易引入锯齿，这属于着色走样，MSAA对此无能为力（它只在几何边缘制造平滑的渐变，而镂空在三角形内部）；后者虽然可以有平滑的边缘，但要得到正确结果需要正确的顺序。为了解决这个问题，基于MSAA的<code>Alpha-To-Coverage</code>技术被发明出来了，使用它不仅可以有平滑的边缘，而且也不依赖半透排序，具体做法可以参考<a href="https://bgolus.medium.com/anti-aliased-alpha-test-the-esoteric-alpha-to-coverage-8b177335ae4f" target="_blank" rel="noopener">这里</a> 。</p>
 <p><figure>
   <img src="/images/20220529-%e5%ae%9e%e6%97%b6%e6%b8%b2%e6%9f%93%e4%b8%ad%e7%9a%84%e5%8f%8d%e8%b5%b0%e6%a0%b7MSAA/atc.png" alt="" />
   <figcaption><center><h4></h4></center></figcaption>
 </figure> </p>
-<p><code>Alpha-To-Coverage</code>的原理很简单，MSAA的覆盖率不仅由子样本的深度和模板值决定，还会基于alpha生成一个coverage mask，再和原来的结果做一个AND操作，最终影响要更新的样本数。比如有两个子样本通过了覆盖测试，在写入子样本颜色之前，读取到alpha值为0.5，那么只会有一个子样本颜色被写入，这样就实现了50%的半透明效果，具体实现是硬件相关的。某种程度上可以把<code>Alpha to Coverage</code>可解为基于亚像素级别的Alpha Test，把Alpha转成mask来实现平滑过渡。</p>
+<p><code>Alpha-To-Coverage</code>的原理很简单，MSAA的覆盖率除了由子样本的深度和模板值决定外，还会额外基于alpha生成一个coverage mask，再和原来的结果做一个AND操作，最终影响要更新的样本数。比如有两个子样本通过了覆盖测试，在写入子样本颜色之前，读取到alpha值为0.5，那么只会有一个子样本颜色被写入，这样就实现了50%的半透明效果，具体实现是硬件相关的。某种程度上可以把<code>Alpha to Coverage</code>可解为基于亚像素级别的Alpha Test，把Alpha转成mask来实现平滑过渡。</p>
 <h1 id="on-chip-msaa">On-Chip MSAA</h1>
 <p>移动设备GPU一般是TBR/TBDR的架构，它将需要渲染的画面分成一个个的tile（比如32x32大小），tile内包含相应的frame buffer/depth buffer/stencil buffer等数据。在渲染每个tile时，GPU可以把整个tile放进一个片上高速缓存（on-chip memory），这样GPU就只要直接读写本地缓存，不需要访问外部内存，当tile渲染完成后，再整片写回system memory，整个过程极大减少了带宽消耗。</p>
 <p>理论上可以将整个MSAA放在on-chip memory上高效的完成，子样本需要的所有数据，都存储在tile内，然后在tile写回内存时进行Resolve，这就不会有带宽的额外消耗。</p>
@@ -272,7 +272,11 @@
           <a href="/tags/Rendering/">Rendering</a>
           </div>
       <nav class="post-nav">
-        
+        <a class="prev" href="/post/20220605-%E5%AE%9E%E6%97%B6%E6%B8%B2%E6%9F%93%E4%B8%AD%E7%9A%84%E5%8F%8D%E8%B5%B0%E6%A0%B7%E7%A9%BA%E5%9F%9F%E6%BB%A4%E6%B3%A2%E6%8A%97%E9%94%AF%E9%BD%BF/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">实时渲染中的反走样：空域滤波抗锯齿</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
         <a class="next" href="/post/20220528-%E6%B8%B2%E6%9F%93%E4%B8%AD%E7%9A%84%E9%87%87%E6%A0%B7%E7%90%86%E8%AE%BA/">
             <span class="next-text nav-default">渲染中的采样理论</span>
             <span class="next-text nav-mobile">Next</span>
