@@ -1,0 +1,1011 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/images/favicon-32x32.png">
+  <link rel="icon" href="/images/favicon-32x32.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Luxaviar">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="MSAA对几何走样有很好的表现，并且避免了SSAA成倍的着色开销，但缺点也很明显：  深度和颜色缓冲的显存和带宽开销并没有减少 不适用于延迟渲染（解决成本太高） 无法解决着色走样  MSAA的核心思想是解耦了覆盖和着色，通过覆盖测试找出了几何边缘的所在，并对几何边缘区域单独做混合。而找出边缘在图像处理领域也有很多办法，这种基于分析图像找出边缘再进一步处理的想法带来的一系列抗锯齿方法位于">
+<meta property="og:type" content="article">
+<meta property="og:title" content="实时渲染中的反走样：空域滤波抗锯齿">
+<meta property="og:url" content="https://luxaviar.github.io/2022/06/05/spatial-anti-aliasing.html">
+<meta property="og:site_name" content="Luxaviar&#39;s Blog">
+<meta property="og:description" content="MSAA对几何走样有很好的表现，并且避免了SSAA成倍的着色开销，但缺点也很明显：  深度和颜色缓冲的显存和带宽开销并没有减少 不适用于延迟渲染（解决成本太高） 无法解决着色走样  MSAA的核心思想是解耦了覆盖和着色，通过覆盖测试找出了几何边缘的所在，并对几何边缘区域单独做混合。而找出边缘在图像处理领域也有很多办法，这种基于分析图像找出边缘再进一步处理的想法带来的一系列抗锯齿方法位于">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/nesw.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/fxaa_threshold.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/nesw2.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/nesw_weight.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/smooth.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/fxaa_direction.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/fxaa_result1.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/fxaa_edge.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/edge_gradient.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/edge_search.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/edge_side.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/fxaa_result2.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/triangle_fxaa1.gif">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/triangle_msaa1.gif">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/MLAA.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/MLAA_blend.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/MLAA_search.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/MLAA_search2.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/MLAA_lut.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/MLAA_lut2.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/MLAA_weight.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/MLAA_gamma.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/MLAA_linear.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/smaa_edge1.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/smaa_edge2.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/smaa_cube.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/smaa_geometric.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/smaa_diagnal.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/smaa_diagnal_lut.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/smaa_search.png">
+<meta property="article:published_time" content="2022-06-05T06:32:55.000Z">
+<meta property="article:modified_time" content="2023-06-24T11:16:35.301Z">
+<meta property="article:author" content="Luxaviar">
+<meta property="article:tag" content="Rendering">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://luxaviar.github.io/images/spatial-anti-aliasing/nesw.png">
+  
+  
+    <meta name="referrer" content="no-referrer-when-downgrade">
+  
+  
+  <title>实时渲染中的反走样：空域滤波抗锯齿 - Luxaviar&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"luxaviar.github.io","root":"/","version":"1.9.4","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":"G-SLB35QMHKE","gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 60vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Luxaviar&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="实时渲染中的反走样：空域滤波抗锯齿"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-06-05 14:32" pubdate>
+          2022年6月5日 下午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          14k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          114 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">实时渲染中的反走样：空域滤波抗锯齿</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <p>MSAA对几何走样有很好的表现，并且避免了SSAA成倍的着色开销，但缺点也很明显：</p>
+<ol type="1">
+<li>深度和颜色缓冲的显存和带宽开销并没有减少</li>
+<li>不适用于延迟渲染（解决成本太高）</li>
+<li>无法解决着色走样</li>
+</ol>
+<p>MSAA的核心思想是解耦了覆盖和着色，通过覆盖测试找出了几何边缘的所在，并对几何边缘区域单独做混合。而找出边缘在图像处理领域也有很多办法，这种基于分析图像找出边缘再进一步处理的想法带来的一系列抗锯齿方法位于后处理，因而非常好地解决了1和2的问题。从信号处理的角度来看，它们可以看做是使用了某种重建滤波器来近似得到过采样的结果，因此可以被归类于<a
+target="_blank" rel="noopener" href="http://iryoku.com/aacourse/">Filtering Approach</a>。</p>
+<p>最早是2009年由Intel的Alexander Reshetov提出的基于CPU的<a
+target="_blank" rel="noopener" href="http://www.cs.cmu.edu/afs/cs/academic/class/15869-f11/www/readings/reshetov09_mlaa.pdf">MLAA算法</a>（<code>Morphological Anti-aliasing</code>），最初是为了解决光线追踪的抗锯齿技术，然后在2011由Jimenez给出了GPU上的<a
+target="_blank" rel="noopener" href="http://iryoku.com/aacourse/downloads/04-Jimenez&#39;s-MLAA-&amp;-SMAA-(Subpixel-Morphological-Anti-Aliasing).pdf">实现</a>并进一步改进为<a
+target="_blank" rel="noopener" href="http://www.iryoku.com/smaa/downloads/SMAA-Enhanced-Subpixel-Morphological-Antialiasing.pdf">SMAA</a>（<code>Enhanced Subpixel Morphological Antialiasing</code>），Nvidia的Timothy
+Lottes也在2009年提出了一种简单且有效的抗锯齿算法——<a
+target="_blank" rel="noopener" href="https://developer.download.nvidia.cn/assets/gamedev/files/sdk/11/FXAA_WhitePaper.pdf">FXAA</a>（<code>Fast Approximate Antialiasing</code>）。目前最流行的这类抗锯齿方案是
+FXAA 和 SMAA，前者速度最快，但表现稍差，后者表现最好，但开销较大。</p>
+<h1 id="fxaa">FXAA</h1>
+<p>以下内容主要来自这篇<a
+target="_blank" rel="noopener" href="https://catlikecoding.com/unity/tutorials/advanced-rendering/fxaa/">文章</a>。</p>
+<h2 id="亮度">亮度</h2>
+<p>FXAA通过对比度来找寻图像的边缘，而对比度由亮度决定，FXAA实际上工作于只包含像素亮度的灰度图，这意味着当亮度足够接近时，即便像素本身颜色非常不一样，它们之间的过渡也不会显得很平滑。另外，FXAA需要亮度值在0~1之间，因此需要在tonemapping之后进行。</p>
+<p>考虑到人眼对绿色是最敏感的，亮度可以直接使用g分量，当然也可以用常见的<code>dot(color, float3(0.2126729f,  0.7151522f, 0.0721750f)</code>计算。如果是后者，可以考虑单独一个pass预计算亮度并保存在alpha通道，这样就避免了每次采样都要计算亮度，还能直接使用<a
+target="_blank" rel="noopener" href="https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/texture2d-gather">Gather</a>函数来加速采样的过程。</p>
+<h2 id="对比度">对比度</h2>
+<p>FXAA 的目的是混合高对比度的像素，为此它需要：</p>
+<ol type="1">
+<li>计算当前像素和周围像素的对比度。</li>
+<li>如果有足够高的对比度，那就根据对比度选择混合因子。</li>
+<li>考察对比度梯度，以确定混合方向。</li>
+<li>在当前像素和它的一个邻近像素之间执行混合。</li>
+</ol>
+<figure>
+<img src="/images/spatial-anti-aliasing/nesw.png" srcset="/img/loading.gif" lazyload
+alt="FXAA使用水平和垂直方向的邻居像素以及中心像素计算对比度" />
+<figcaption
+aria-hidden="true">FXAA使用水平和垂直方向的邻居像素以及中心像素计算对比度</figcaption>
+</figure>
+<p>计算对比度的代码如下： <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">LuminanceData</span> &#123;</span><br>    <span class="hljs-type">float</span> m, n, e, s, w;<br>&#125;;<br><br>LuminanceData <span class="hljs-title function_">SampleLuminanceNeighborhood</span> <span class="hljs-params">(float2 uv)</span> &#123;<br>    LuminanceData l;<br>    …<br><br>    l.highest = max(max(max(max(l.n, l.e), l.s), l.w), l.m);<br>    l.lowest = min(min(min(min(l.n, l.e), l.s), l.w), l.m);<br>    l.contrast = l.highest - l.lowest;<br>    <span class="hljs-keyword">return</span> l;<br>&#125;<br></code></pre></td></tr></table></figure>
+我们只关心高于一定阈值的对比度，除了绝对阈值<code>_ContrastThreshold</code>，FXAA还引入了相对阈值<code>_RelativeThreshold</code>——基于邻居像素的最大亮度值缩放而来，邻居越亮，阈值越高。
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs c">float4 <span class="hljs-title function_">ApplyFXAA</span> <span class="hljs-params">(float2 uv)</span> &#123;<br>    LuminanceData l = SampleLuminanceNeighborhood(uv);<br>    <span class="hljs-keyword">if</span> (l.contrast &gt;= max(_ContrastThreshold, _RelativeThreshold * l.highest)) &#123;<br>        ...<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure></p>
+<p>结果就是只有高对比度的像素才会进入下一个阶段。</p>
+<p><img src="/images/spatial-anti-aliasing/fxaa_threshold.png" srcset="/img/loading.gif" lazyload /></p>
+<h2 id="混合因子">混合因子</h2>
+<p>有了对比度，我们还需要混合因子。如何混合取决于中心像素和它的邻居的亮度的比较，这次我们还需要对角线的邻居。</p>
+<p><img src="/images/spatial-anti-aliasing/nesw2.png" srcset="/img/loading.gif" lazyload /></p>
+<p>考虑到对角线像素离中心更远一点，它们应该有更低的权重，结果有点类似<code>tent filter</code>。</p>
+<p><img src="/images/spatial-anti-aliasing/nesw_weight.png" srcset="/img/loading.gif" lazyload /></p>
+<p>接着找出中心像素亮度和期望亮度的差，取绝对值，此时结果类似<code>high-pass filter</code>，然后再根据NESW的亮度范围进行归一化。结果就是，中间像素亮度与期望亮度差值越大，混合因子越趋向于1。
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">float</span> <span class="hljs-title function_">DeterminePixelBlendFactor</span> <span class="hljs-params">(LuminanceData l)</span> &#123;<br>    <span class="hljs-comment">//tent filter</span><br>    <span class="hljs-type">float</span> filter = <span class="hljs-number">2</span> * (l.n + l.e + l.s + l.w);<br>    filter += l.ne + l.nw + l.se + l.sw;<br>    filter *= <span class="hljs-number">1.0</span> / <span class="hljs-number">12</span>;<br>    <span class="hljs-comment">//high-pass</span><br>    filter = <span class="hljs-built_in">abs</span>(filter - l.m); <br>    filter = saturate(filter / l.contrast);<br>    <span class="hljs-keyword">return</span> filter;<br>&#125;<br></code></pre></td></tr></table></figure>
+这个结果是线性的，作为混合因子还不够平滑，我们使用smoothstep处理一下，为了让它下降的更慢一些，我们再进行一次平方。</p>
+<p><img src="/images/spatial-anti-aliasing/smooth.png" srcset="/img/loading.gif" lazyload /></p>
+<p>最终实现： <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">float</span> <span class="hljs-title function_">DeterminePixelBlendFactor</span> <span class="hljs-params">(LuminanceData l)</span> &#123;<br>    <span class="hljs-comment">//tent filter</span><br>    <span class="hljs-type">float</span> filter = <span class="hljs-number">2</span> * (l.n + l.e + l.s + l.w);<br>    filter += l.ne + l.nw + l.se + l.sw;<br>    filter *= <span class="hljs-number">1.0</span> / <span class="hljs-number">12</span>;<br>    <span class="hljs-comment">//high-pass</span><br>    filter = <span class="hljs-built_in">abs</span>(filter - l.m); <br>    filter = saturate(filter / l.contrast);<br>    <br>    <span class="hljs-type">float</span> blendFactor = smoothstep(<span class="hljs-number">0</span>, <span class="hljs-number">1</span>, filter);<br>    <span class="hljs-keyword">return</span> blendFactor * blendFactor;<br>&#125;<br></code></pre></td></tr></table></figure></p>
+<h2 id="混合方向">混合方向</h2>
+<p>FXAA把中心像素和NESW的某个邻居像素混合，选取哪一个取决于亮度的梯度。在水平边的情况下，它必须是S或者N，取决于中心是低于还是高于这个边。否则，就必须是E或者W，取决于中心是在边的左边还是右边。</p>
+<figure>
+<img src="/images/spatial-anti-aliasing/fxaa_direction.png" srcset="/img/loading.gif" lazyload
+alt="混合方向-红色表示亮度更暗或更亮" />
+<figcaption
+aria-hidden="true">混合方向-红色表示亮度更暗或更亮</figcaption>
+</figure>
+<p>边缘并不总是刚好水平或者垂直，我们要选取一个最好的近似。为此，我们要比较水平和垂直方向的亮度。当它是水平边缘的情况，那么就应该有更强烈的垂直对比度，可能高于或低于中心，我们通过加上北和南，减去中心两次，取绝对值<span
+class="math inline">\(|n+s-2m|\)</span>。同样的逻辑也可以应用于垂直边缘。</p>
+<p>我们还可以引入对角线像素来增强我们判断方向的正确性。对于左对角和右对角的各三个像素，分别做上述的计算，然后累加起来，这就得到了最终公式<span
+class="math inline">\(2|n+s-2m| +
+|ne+se-2e|+|nw+sw-2w|\)</span>。垂直边缘也是类似的算法，最后我们只关心谁的值更大。
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">EdgeData</span> &#123;</span><br>    <span class="hljs-type">bool</span> isHorizontal;<br>&#125;;<br><br>EdgeData <span class="hljs-title function_">DetermineEdge</span> <span class="hljs-params">(LuminanceData l)</span> &#123;<br>    EdgeData e;<br>    <span class="hljs-type">float</span> horizontal =<br>        <span class="hljs-built_in">abs</span>(l.n + l.s - <span class="hljs-number">2</span> * l.m) * <span class="hljs-number">2</span> +<br>        <span class="hljs-built_in">abs</span>(l.ne + l.se - <span class="hljs-number">2</span> * l.e) +<br>        <span class="hljs-built_in">abs</span>(l.nw + l.sw - <span class="hljs-number">2</span> * l.w);<br>    <span class="hljs-type">float</span> vertical =<br>        <span class="hljs-built_in">abs</span>(l.e + l.w - <span class="hljs-number">2</span> * l.m) * <span class="hljs-number">2</span> +<br>        <span class="hljs-built_in">abs</span>(l.ne + l.nw - <span class="hljs-number">2</span> * l.n) +<br>        <span class="hljs-built_in">abs</span>(l.se + l.sw - <span class="hljs-number">2</span> * l.s);<br>    e.isHorizontal = horizontal &gt;= vertical;<br>    <span class="hljs-keyword">return</span> e;<br>&#125;<br></code></pre></td></tr></table></figure>
+接下来，我们要决定该和正还是负方向混合。我们通过比较对比度——亮度梯度——在中心两边的亮度值来决定。如果我们有一个水平边缘，那么N是正，S是负，如果我们有一个垂直边缘，那么E是正，W是负。如果正方向有最高的梯度，那么我们使用默认像素大小，否则像素大小取反。
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">float</span> pLuminance = e.isHorizontal ? l.n : l.e;<br><span class="hljs-type">float</span> nLuminance = e.isHorizontal ? l.s : l.w;<br><span class="hljs-type">float</span> pGradient = <span class="hljs-built_in">abs</span>(pLuminance - l.m);<br><span class="hljs-type">float</span> nGradient = <span class="hljs-built_in">abs</span>(nLuminance - l.m);<br><br>e.pixelStep =<br>    e.isHorizontal ? _MainTex_TexelSize.y : _MainTex_TexelSize.x;<br><br><span class="hljs-keyword">if</span> (pGradient &lt; nGradient) &#123;<br>    e.pixelStep = -e.pixelStep;<br>&#125;<br></code></pre></td></tr></table></figure> ## 基于3x3的混合
+知道了混合因子和混合方向，混合操作就很简单了。 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">float</span> pixelBlend = DeterminePixelBlendFactor(l);<br>EdgeData e = DetermineEdge(l);<br><br><span class="hljs-keyword">if</span> (e.isHorizontal) &#123;<br>    uv.y += e.pixelStep * pixelBlend;<br>&#125;<br><span class="hljs-keyword">else</span> &#123;<br>    uv.x += e.pixelStep * pixelBlend;<br>&#125;<br><span class="hljs-keyword">return</span> float4(Sample(uv).rgb, l.m);<br></code></pre></td></tr></table></figure></p>
+<p>结果是一个FXAA亚像素混合的抗锯齿图像。它影响高对比度的边缘，但一些低对比度的细节也被影响到了，这导致模糊的有点太过了。</p>
+<p><img src="/images/spatial-anti-aliasing/fxaa_result1.png" srcset="/img/loading.gif" lazyload /></p>
+<p>可以加一个参数<code>_SubpixelBlending</code>人工调整混合因子。
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">float</span> <span class="hljs-title function_">DeterminePixelBlendFactor</span> <span class="hljs-params">(LuminanceData l)</span> &#123;<br>    …<br>    <span class="hljs-keyword">return</span> blendFactor * blendFactor * _SubpixelBlending;<br>&#125;<br></code></pre></td></tr></table></figure> ## 基于边的混合
+现在的混合方案只对像素周围3X3的区域进行判断和混合，而很多锯齿是长条状的，对这些边来讲当前做法的效果并不好。</p>
+<figure>
+<img src="/images/spatial-anti-aliasing/fxaa_edge.png" srcset="/img/loading.gif" lazyload
+alt="从上到下：无抗锯齿、当前效果、期望的效果" />
+<figcaption
+aria-hidden="true">从上到下：无抗锯齿、当前效果、期望的效果</figcaption>
+</figure>
+<p>我们必须知道更多的信息才能知道当前处理的边是什么形状。我们已经知道当前像素在边的哪一侧，混合的像素在另一侧，为了确定边有多长，我们还需要知道它的梯度。
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-class"><span class="hljs-keyword">struct</span> <span class="hljs-title">EdgeData</span> &#123;</span><br>    <span class="hljs-type">bool</span> isHorizontal;<br>    <span class="hljs-type">float</span> pixelStep;<br>    <span class="hljs-type">float</span> oppositeLuminance, gradient;<br>&#125;;<br><br>EdgeData <span class="hljs-title function_">DetermineEdge</span> <span class="hljs-params">(LuminanceData l)</span> &#123;<br>    …<br>    <br>    <span class="hljs-keyword">if</span> (pGradient &lt; nGradient) &#123;<br>        e.pixelStep = -e.pixelStep;<br>        e.oppositeLuminance = nLuminance;<br>        e.gradient = nGradient;<br>    &#125;<br>    <span class="hljs-keyword">else</span> &#123;<br>        e.oppositeLuminance = pLuminance;<br>        e.gradient = pGradient;<br>    &#125;<br><br>    <span class="hljs-keyword">return</span> e;<br>&#125;<br></code></pre></td></tr></table></figure></p>
+<p>我们要计算出当前像素在这个边上的相对位置。为此需要沿着边的两个方向搜索，直到碰到端点——我们可以通过判断像素对的亮度梯度是否和起始像素对的亮度梯度不同来得知这一点。</p>
+<p><img src="/images/spatial-anti-aliasing/edge_gradient.png" srcset="/img/loading.gif" lazyload /></p>
+<p>这里我们可以利用双线性过滤，在两像素中间的点进行一次采样得到两个像素的平均亮度。</p>
+<figure>
+<img src="/images/spatial-anti-aliasing/edge_search.png" srcset="/img/loading.gif" lazyload
+alt="黄色是采样点" />
+<figcaption aria-hidden="true">黄色是采样点</figcaption>
+</figure>
+<p>我们先确定采样点的UV坐标，它位于中心像素uv再偏移一半图素大小的地方，后续的采样方向取决于它的朝向，要么水平要么垂直。
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><code class="hljs c">float2 uvEdge = uv;<br>float2 edgeStep;<br><span class="hljs-keyword">if</span> (e.isHorizontal) &#123;<br>    uvEdge.y += e.pixelStep * <span class="hljs-number">0.5</span>;<br>    edgeStep = float2(_MainTex_TexelSize.x, <span class="hljs-number">0</span>);<br>&#125;<br><span class="hljs-keyword">else</span> &#123;<br>    uvEdge.x += e.pixelStep * <span class="hljs-number">0.5</span>;<br>    edgeStep = float2(<span class="hljs-number">0</span>, _MainTex_TexelSize.y);<br>&#125;<br></code></pre></td></tr></table></figure></p>
+<p>我们把当前像素点和待混合像素点的平均亮度乘以0.25（一个经验值）作为边缘的梯度阈值，在搜索时，对比采样的亮度和平均亮度得到一个亮度梯度，把这个梯度和梯度阈值做比较，如果两者相近，那么说明我们还没碰到端点，否则我们找到了边的端点。
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs csharp"><span class="hljs-built_in">float</span> edgeLuminance = (l.m + e.oppositeLuminance) * <span class="hljs-number">0.5</span>;<br><span class="hljs-built_in">float</span> gradientThreshold = e.gradient * <span class="hljs-number">0.25</span>;<br><br>float2 puv = uvEdge + edgeStep;<br><span class="hljs-built_in">float</span> pLuminanceDelta = SampleLuminance(puv) - edgeLuminance;<br><span class="hljs-built_in">bool</span> pAtEnd = abs(pLuminanceDelta) &gt;= gradientThreshold;<br></code></pre></td></tr></table></figure></p>
+<p>我们必须在两侧持续搜索才能找到端点，因此我们需要一个循环，比如最多往两侧步进10次。</p>
+<figure class="highlight csharp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><code class="hljs csharp"><span class="hljs-comment">//正方向</span><br>float2 puv = uvEdge + edgeStep;<br><span class="hljs-built_in">float</span> pLuminanceDelta = SampleLuminance(puv) - edgeLuminance;<br><span class="hljs-built_in">bool</span> pAtEnd = abs(pLuminanceDelta) &gt;= gradientThreshold;<br><br><span class="hljs-keyword">for</span> (<span class="hljs-built_in">int</span> i = <span class="hljs-number">0</span>; i &lt; <span class="hljs-number">9</span> &amp;&amp; !pAtEnd; i++) &#123;<br>    puv += edgeStep;<br>    pLuminanceDelta = SampleLuminance(puv) - edgeLuminance;<br>    pAtEnd = abs(pLuminanceDelta) &gt;= gradientThreshold;<br>&#125;<br><br><span class="hljs-comment">//负方向</span><br>float2 nuv = uvEdge - edgeStep;<br><span class="hljs-built_in">float</span> nLuminanceDelta = SampleLuminance(nuv) - edgeLuminance;<br><span class="hljs-built_in">bool</span> nAtEnd = abs(nLuminanceDelta) &gt;= gradientThreshold;<br><br><span class="hljs-keyword">for</span> (<span class="hljs-built_in">int</span> i = <span class="hljs-number">0</span>; i &lt; <span class="hljs-number">9</span> &amp;&amp; !nAtEnd; i++) &#123;<br>    nuv -= edgeStep;<br>    nLuminanceDelta = SampleLuminance(nuv) - edgeLuminance;<br>    nAtEnd = abs(nLuminanceDelta) &gt;= gradientThreshold;<br>&#125;<br></code></pre></td></tr></table></figure>
+<blockquote>
+<p>搜索步进能很大程度影响FXAA的表现，同时也影响性能，除了固定的步长，原版FXAA算法包含了一系列质量定义。Unity的post
+effect stack
+v2使用质量等级28作为默认值。它的步进次数为10，第二步进距离为1.5而不是1，后续所有的步进长度是2，最后一个是4。如果还找不到端点，还有一个猜测步进长度是8。</p>
+</blockquote>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-meta">#<span class="hljs-keyword">define</span> EDGE_STEPS 1, 1.5, 2, 2, 2, 2, 2, 2, 2, 4</span><br><span class="hljs-meta">#<span class="hljs-keyword">define</span> EDGE_GUESS 8</span><br></code></pre></td></tr></table></figure>
+<blockquote>
+<p>相对于单像素的步进，混合因子的块状更明显一点，质量因此稍微受损。但是它只需要更少的循环就能找到短边，更长的边也更容易找到。</p>
+</blockquote>
+<p>现在我们知道了当前像素离两个端点的距离，我们就可以利用它来计算混合因子，我们取最靠近端点的一侧计算混合因子。但在此之前，我们要先判断当前像素是否在属于最近端点那一侧，只有和最近端点同侧的像素才进行混合。判断依据就是，当前亮度和平均亮度的差的符号，和最近端点亮度和平均亮度的差的符号，是否一致。如果不在同一侧，那么就不混合（算法保证这个混合操作最终会在处理相对边的像素时进行）。</p>
+<p><img src="/images/spatial-anti-aliasing/edge_side.png" srcset="/img/loading.gif" lazyload /></p>
+<p>如果需要混合，那么混合因子为0.5减去离最近端点距离除以总边长。这意味着越靠近端点就混合越多其他像素颜色，但在中点不做任何混合。
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">float</span> shortestDistance;<br><span class="hljs-type">bool</span> deltaSign;<br><span class="hljs-keyword">if</span> (pDistance &lt;= nDistance) &#123;<br>    shortestDistance = pDistance;<br>    deltaSign = pLuminanceDelta &gt;= <span class="hljs-number">0</span>;<br>&#125;<br><span class="hljs-keyword">else</span> &#123;<br>    shortestDistance = nDistance;<br>    deltaSign = nLuminanceDelta &gt;= <span class="hljs-number">0</span>;<br>&#125;<br><br><span class="hljs-keyword">if</span> (deltaSign == (l.m - edgeLuminance &gt;= <span class="hljs-number">0</span>)) &#123;<br>    <span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;<br>&#125;<br><br><span class="hljs-keyword">return</span> <span class="hljs-number">0.5</span> - shortestDistance / (pDistance + nDistance);<br></code></pre></td></tr></table></figure></p>
+<p>最后，我们使用基于3x3区域的混合因子以及基于边算出的混合因子中的最大值，作为最终的混合因子。
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">float</span> pixelBlend = DeterminePixelBlendFactor(l);<br>EdgeData e = DetermineEdge(l);<br><span class="hljs-type">float</span> edgeBlend = DetermineEdgeBlendFactor(l, e, uv);<br><span class="hljs-type">float</span> finalBlend = max(pixelBlend, edgeBlend);<br><br><span class="hljs-keyword">if</span> (e.isHorizontal) &#123;<br>    uv.y += e.pixelStep * finalBlend;<br>&#125;<br><span class="hljs-keyword">else</span> &#123;<br>    uv.x += e.pixelStep * finalBlend;<br>&#125;<br><span class="hljs-keyword">return</span> float4(Sample(uv).rgb, l.m);<br></code></pre></td></tr></table></figure></p>
+<p><img src="/images/spatial-anti-aliasing/fxaa_result2.png" srcset="/img/loading.gif" lazyload /></p>
+<h2 id="特点">特点</h2>
+<p>在表现上FXAA很接近MSAA，但由于它是基于像素来分析几何边缘的模式，因而其覆盖测试本质上不会超过一个像素的精度。在变动的画面中，三角形覆盖的像素是突然出现和消失的，因此不可避免地存在一种称为闪烁(<code>flicking</code>)的artifact。</p>
+<p><img src="/images/spatial-anti-aliasing/triangle_fxaa1.gif" srcset="/img/loading.gif" lazyload /></p>
+<p><img src="/images/spatial-anti-aliasing/triangle_msaa1.gif" srcset="/img/loading.gif" lazyload /></p>
+<p><em>旋转三角形的两种动画：上面启用了 FXAA，下面启用了
+MSAAx4。注意：MSAA在三角形的边缘处对可见性测试进行了超采样，在MSAA中三角形覆盖的像素通过对子样本采样使得运动时的覆盖测试也有平滑过渡。而FXAA缺乏这种特性，尽管它的确沿着边缘产生了平滑的渐变，但这个渐变会突然消失或者出现。</em></p>
+<h1 id="mlaa">MLAA</h1>
+<p>SMAA基于MLAA优化改进而来，核心理念还是来自MLAA，为此先介绍MLAA。MLAA分成3个大的步骤分别对应3个Pass：第一步生成边缘信息图，第二步生成混合权重图，第三步做混合。</p>
+<p><img src="/images/spatial-anti-aliasing/MLAA.png" srcset="/img/loading.gif" lazyload /></p>
+<h2 id="边缘检测">边缘检测</h2>
+<p>有2种方法做边缘检测，一种是深度图，一种是像FXAA一样使用亮度。单纯使用深度图对深度接近而颜色差异大的边缘效果不好，而深度再加上instace
+id+normal是最精确的，但开销太大，综合来讲使用亮度是最合适的。</p>
+<p>MLAA将图像的边缘划分为垂直和水平两类，每次都对当前像素与左边和上边相邻的像素做对比，当差别大于某个阈值时认为此像素和邻居像素构成边界，论文中提到对于颜色域是<span
+class="math inline">\([0,1]\)</span>的图像来说,
+0.1的阈值是比较实用的选择，代码实现如下： <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs c">    <span class="hljs-type">float</span> L = dot(colorGammaTex.SampleLevel(PointSampler, texcoord, <span class="hljs-number">0</span>).rgb, weights);<br><br>    <span class="hljs-type">float</span> Lleft = dot(colorGammaTex.SampleLevel(PointSampler, texcoord, <span class="hljs-number">0</span>, -int2(<span class="hljs-number">1</span>, <span class="hljs-number">0</span>)).rgb, weights);<br>    <span class="hljs-type">float</span> Ltop  = dot(colorGammaTex.SampleLevel(PointSampler, texcoord, <span class="hljs-number">0</span>, -int2(<span class="hljs-number">0</span>, <span class="hljs-number">1</span>)).rgb, weights);<br>    <span class="hljs-type">float</span> Lright = dot(colorGammaTex.SampleLevel(PointSampler, texcoord, <span class="hljs-number">0</span>, int2(<span class="hljs-number">1</span>, <span class="hljs-number">0</span>)).rgb, weights);<br>    <span class="hljs-type">float</span> Lbottom  = dot(colorGammaTex.SampleLevel(PointSampler, texcoord, <span class="hljs-number">0</span>, int2(<span class="hljs-number">0</span>, <span class="hljs-number">1</span>)).rgb, weights);<br><br>    float4 delta = <span class="hljs-built_in">abs</span>(L.xxxx - float4(Lleft, Ltop, Lright, Lbottom));<br>    float4 edges = step(threshold.xxxx, delta);<br><br>    <span class="hljs-keyword">if</span> (dot(edges, <span class="hljs-number">1.0</span>) == <span class="hljs-number">0.0</span>)<br>        discard;<br>    <span class="hljs-keyword">return</span> edges;<br></code></pre></td></tr></table></figure></p>
+<p>一开始会初始化一张全为0的纹理保存边缘信息，如果边界出现在当前像素左边，则R为1（存在垂直边缘），如果边界出现在上边则G为1（存在水平边缘），也可以同时出现两个边界，于是边缘信息图将会由红黄绿三色构成。</p>
+<h2 id="混合权重">混合权重</h2>
+<p>为了找出边缘的模式，我们要在边缘可能出现的地方做搜索，上一步生成的R和G分量为1的像素就是搜索开始的地方。</p>
+<p><img src="/images/spatial-anti-aliasing/MLAA_blend.png" srcset="/img/loading.gif" lazyload /></p>
+<p>假设在G为1的地方搜索水平边缘，目的就是要找出当前像素离左右端点的距离<span
+class="math inline">\(d_{left},d_{right}\)</span>，，以及边界<span
+class="math inline">\(e_{left},e_{right}\)</span>，然后根据<span
+class="math inline">\(d\)</span>和<span
+class="math inline">\(e\)</span>计算当前像素的覆盖率。</p>
+<p>和FXAA类似，在这里我们可以利用双线性滤波来减少采样次数，假设从绿色五角星出发向左搜索到红色圆圈所在的位置，我们需要判断G值的不同，为此我们在两个像素中间（菱形）位置一次采样，就获能得两个像素的G平均值。如果值为1，说明两个点都有上边界；为0.5，说明只有一个点有上边界；为0，说明两个点都没有上边界。</p>
+<p><img src="/images/spatial-anti-aliasing/MLAA_search.png" srcset="/img/loading.gif" lazyload /></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">float</span> <span class="hljs-title function_">SearchXLeft</span><span class="hljs-params">(float2 texcoord)</span> &#123;<br>    texcoord -= float2(<span class="hljs-number">1.5</span>, <span class="hljs-number">0.0</span>) * PIXEL_SIZE;<br>    <span class="hljs-type">float</span> e = <span class="hljs-number">0.0</span>;<br><br>    <span class="hljs-comment">// We offset by 0.5 to sample between edgels, thus fetching two in a row</span><br>    <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> i = <span class="hljs-number">0</span>; i &lt; maxSearchSteps; i++) &#123;<br>        e = edgesTex.SampleLevel(LinearSampler, texcoord, <span class="hljs-number">0</span>).g;<br>        <span class="hljs-comment">// We compare with 0.9 to prevent bilinear access precision problems</span><br>        [flatten] <span class="hljs-keyword">if</span> (e &lt; <span class="hljs-number">0.9</span>) <span class="hljs-keyword">break</span>;<br>        texcoord -= float2(<span class="hljs-number">2.0</span>, <span class="hljs-number">0.0</span>) * PIXEL_SIZE;<br>    &#125;<br><br>    <span class="hljs-comment">// When we exit the loop without founding the end, we want to return</span><br>    <span class="hljs-comment">// -2 * maxSearchSteps</span><br>    <span class="hljs-keyword">return</span> max(<span class="hljs-number">-2.0</span> * i - <span class="hljs-number">2.0</span> * e, <span class="hljs-number">-2.0</span> * maxSearchSteps);<br>&#125;<br></code></pre></td></tr></table></figure>
+<p>而对于边界形状的检测也可以做类似的优化，不过需要在垂直方向偏移0.25个像素。比如在向右查找边缘的端点时，向下偏移0.25个像素采样，会获得4种可能的值对应4种形状，根据返回值我们马上就能判断边界形状：</p>
+<p><img src="/images/spatial-anti-aliasing/MLAA_search2.png" srcset="/img/loading.gif" lazyload /></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs c">        <span class="hljs-comment">// Now fetch the crossing edges. Instead of sampling between edgels, we</span><br>        <span class="hljs-comment">// sample at -0.25, to be able to discern what value has each edgel:</span><br>        float4 coords = mad(float4(d.x, <span class="hljs-number">-0.25</span>, d.y + <span class="hljs-number">1.0</span>, <span class="hljs-number">-0.25</span>),<br>                            PIXEL_SIZE.xyxy, texcoord.xyxy);<br>        <span class="hljs-type">float</span> e1 = edgesTex.SampleLevel(LinearSampler, coords.xy, <span class="hljs-number">0</span>).r;<br>        <span class="hljs-type">float</span> e2 = edgesTex.SampleLevel(LinearSampler, coords.zw, <span class="hljs-number">0</span>).r;<br></code></pre></td></tr></table></figure>
+<p>确定了边的长度和形状，就可以计算当前像素的覆盖率，也就是混合权重。理论上要根据重矢量化线计算像素覆盖面积，但是Jimenez在这里引入事先计算好权重的LUT纹理，避免了动态分支和复杂的面积计算过程。由于计算步数的限制，边缘长度最大为
+8，而边缘端点处形状则限制为4种，故所有长度和形状的边缘对应的权重值，都可以保存在一张纹理中。</p>
+<p><img src="/images/spatial-anti-aliasing/MLAA_lut.png" srcset="/img/loading.gif" lazyload /></p>
+<p>纹理中的R通道表示是将下面像素颜色混合到上面，G通道与此相反，B通道表示将左边像素混合到当前像素的系数，A通道与此相反。此外还有选择性的不处理某些模式以及简化某些模式，因为这些模式的重矢量化会引入artifact。各个维度对应的参数如下：</p>
+<p><img src="/images/spatial-anti-aliasing/MLAA_lut2.png" srcset="/img/loading.gif" lazyload /></p>
+<p>实现代码： <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs c">float2 <span class="hljs-title function_">Area</span><span class="hljs-params">(float2 distance, <span class="hljs-type">float</span> e1, <span class="hljs-type">float</span> e2)</span> &#123;<br>     <span class="hljs-comment">// * By dividing by areaSize - 1.0 below we are implicitely offsetting to</span><br>     <span class="hljs-comment">//   always fall inside of a pixel</span><br>     <span class="hljs-comment">// * Rounding prevents bilinear access precision problems</span><br>    <span class="hljs-type">float</span> areaSize = MAX_DISTANCE * <span class="hljs-number">5</span>;<br>    float2 pixcoord = MAX_DISTANCE * round(<span class="hljs-number">4.0</span> * float2(e1, e2)) + distance;<br>    float2 texcoord = pixcoord / (areaSize - <span class="hljs-number">1.0</span>);<br>    <span class="hljs-keyword">return</span> areaTex.SampleLevel(PointSampler, texcoord, <span class="hljs-number">0</span>).rg;<br>&#125;<br></code></pre></td></tr></table></figure> ## 混合颜色
+这里再次利用了双线性过滤器，一次性混合4个方向的颜色。</p>
+<p><img src="/images/spatial-anti-aliasing/MLAA_weight.png" srcset="/img/loading.gif" lazyload /></p>
+<p>实现代码： <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><code class="hljs c">float4 <span class="hljs-title function_">NeighborhoodBlendingPS</span><span class="hljs-params">(float4 position : SV_POSITION,</span><br><span class="hljs-params">                              float2 texcoord : TEXCOORD0)</span> : SV_TARGET &#123;<br>    <span class="hljs-comment">// Fetch the blending weights for current pixel:</span><br>    float4 topLeft = blendTex.SampleLevel(PointSampler, texcoord, <span class="hljs-number">0</span>);<br>    <span class="hljs-type">float</span> bottom = blendTex.SampleLevel(PointSampler, texcoord, <span class="hljs-number">0</span>, int2(<span class="hljs-number">0</span>, <span class="hljs-number">1</span>)).g;<br>    <span class="hljs-type">float</span> right = blendTex.SampleLevel(PointSampler, texcoord, <span class="hljs-number">0</span>, int2(<span class="hljs-number">1</span>, <span class="hljs-number">0</span>)).a;<br>    float4 a = float4(topLeft.r, bottom, topLeft.b, right);<br><br>    <span class="hljs-comment">// Up to 4 lines can be crossing a pixel (one in each edge). So, we perform</span><br>    <span class="hljs-comment">// a weighted average, where the weight of each line is &#x27;a&#x27; cubed, which</span><br>    <span class="hljs-comment">// favors blending and works well in practice.</span><br>    float4 w = a * a * a;<br><br>    <span class="hljs-comment">// There is some blending weight with a value greater than 0.0?</span><br>    <span class="hljs-type">float</span> sum = dot(w, <span class="hljs-number">1.0</span>);<br>    <span class="hljs-keyword">if</span> (sum &lt; <span class="hljs-number">1e-5</span>)<br>        discard;<br><br>    float4 color = <span class="hljs-number">0.0</span>;<br><br>    <span class="hljs-comment">// Add the contributions of the possible 4 lines that can cross this</span><br>    <span class="hljs-comment">// pixel:</span><br>    float4 coords = mad(float4( <span class="hljs-number">0.0</span>, -a.r, <span class="hljs-number">0.0</span>,  a.g), PIXEL_SIZE.yyyy, texcoord.xyxy);<br>    color = mad(colorTex.SampleLevel(LinearSampler, coords.xy, <span class="hljs-number">0</span>), w.r, color);<br>    color = mad(colorTex.SampleLevel(LinearSampler, coords.zw, <span class="hljs-number">0</span>), w.g, color);<br>    coords = mad(float4(-a.b,  <span class="hljs-number">0.0</span>, a.a,  <span class="hljs-number">0.0</span>), PIXEL_SIZE.xxxx, texcoord.xyxy);<br>    color = mad(colorTex.SampleLevel(LinearSampler, coords.xy, <span class="hljs-number">0</span>), w.b, color);<br>    color = mad(colorTex.SampleLevel(LinearSampler, coords.zw, <span class="hljs-number">0</span>), w.a, color);<br><br>    <span class="hljs-comment">// Normalize the resulting color and we are finished!</span><br>    <span class="hljs-keyword">return</span> color / sum;<br><br>&#125;<br></code></pre></td></tr></table></figure> ## Linear Space
+还需要注意的一点是，MLAA需要在线性空间下进行 （和FXAA不同）。</p>
+<p><img src="/images/spatial-anti-aliasing/MLAA_gamma.png" srcset="/img/loading.gif" lazyload /></p>
+<figure>
+<img src="/images/spatial-anti-aliasing/MLAA_linear.png" srcset="/img/loading.gif" lazyload
+alt="明显下面的结果更接近MSAA 8x" />
+<figcaption aria-hidden="true">明显下面的结果更接近MSAA 8x</figcaption>
+</figure>
+<h1 id="smaa">SMAA</h1>
+<p>SMAA是对MLAA的改进和优化，主要包括以下内容。</p>
+<h2 id="边缘检测-1">边缘检测</h2>
+<p>人眼主观视觉倾向于在高对比边缘出现时，忽略附近低对比度的边缘。因此基于局部亮度查找的边缘，会生成（人眼主观忽略的）伪边缘。下图，最左边的图中红色是伪边缘，绿色是期望的边缘，MLAA会生成中间的结果，而SMAA会生成最右边的结果，更符合人眼直觉。</p>
+<p><img src="/images/spatial-anti-aliasing/smaa_edge1.png" srcset="/img/loading.gif" lazyload /></p>
+<p>为了找出高对比度边缘，SMAA引入了自适应的双阈值判定来达到两个目的：</p>
+<ol type="1">
+<li>防止搜索在伪边界停止。</li>
+<li>当像素有两个平行的边缘时，选择占主导地位（高对比度）的边缘。</li>
+</ol>
+<p>以左边界搜索为例，首先和MLAA一样用当前像素和左侧像素的亮度差做边界判定：<span
+class="math inline">\(e_l = |L - L_l| &gt; T\)</span> （<span
+class="math inline">\(e_l\)</span>是个布尔值，<span
+class="math inline">\(T\)</span>是阈值），接着我们还会再往左考虑一个像素的亮度，做第二次判定：
+<span class="math display">\[
+\begin{aligned}
+c_{max} &amp;= max(c_t, c_r, c_b, c_l, c_{2l})\\
+e_l\ &amp;= e_l \wedge c_l &gt; 0.5 \cdot c_{max}
+\end{aligned}
+\]</span>
+结果就如下图，灰点是当前像素，橙色是伪边界，蓝色是主导边界。最终算法会舍弃橙色边界，留下蓝色边界（最右边）。</p>
+<p><img src="/images/spatial-anti-aliasing/smaa_edge2.png" srcset="/img/loading.gif" lazyload /></p>
+<h2 id="模式识别">模式识别</h2>
+<h3 id="保留正常的几何轮廓">保留正常的几何轮廓</h3>
+<p>MLAA倾向于把任何棱角磨圆，比如对一个正方形进行MLAA，会得到下图中间的结果，而SMAA会得到右边的结果。</p>
+<p><img src="/images/spatial-anti-aliasing/smaa_cube.png" srcset="/img/loading.gif" lazyload /></p>
+<p>SMAA的做法是在原边界检测的基础上再向外扩展一个像素做边界检测，如果依然存在边界，则说明有可能是几何棱角（这里的假设是几何轮廓边界总是大于一个像素）。以下图左边为例，原来检测到的（水平）边界是红色，向外扩展一个像素的边界是橙色<span
+class="math inline">\(e_1,e_2,e_3,e_4\)</span>，<span
+class="math inline">\(e3\)</span>依然存在边界，说明原边界可能是几何轮廓的一部分，而<span
+class="math inline">\(e_4\)</span>不存在边界，说明不是几何轮廓。</p>
+<p><img src="/images/spatial-anti-aliasing/smaa_geometric.png" srcset="/img/loading.gif" lazyload /></p>
+如果边界可能是几何轮廓，那么原来的混合权重需要再乘以一个系数<span
+class="math inline">\(r\)</span>，否则就用原来的混合权重。以上图为例，<span
+class="math inline">\(r\)</span>取1.0，0.5和0.0得到的重矢量化线分别是：蓝色（不变），黄色和粉红色。设<span
+class="math inline">\(a_t\)</span>和<span
+class="math inline">\(a_b\)</span>是原边界检测得到的混合权重，则调整后的计算方式如下：
+$$
+<span class="math display">\[\begin{array}c
+a&#39;_t=
+\begin{cases}
+r \cdot a_t  \qquad \text{if} \ d_l \lt d_r \ \wedge \ e_1\\
+r \cdot a_t  \qquad \text{if} \ d_l \ge d_r \ \wedge \ e_2\\
+a_t \qquad \qquad \text{otherwise}
+\end{cases}\\
+
+a&#39;_b=
+\begin{cases}
+r \cdot a_b  \qquad \text{if} \ d_l \lt d_r \ \wedge \ e_3\\
+r \cdot a_b  \qquad \text{if} \ d_l \ge d_r \ \wedge \ e_4\\
+a_b \qquad \qquad \text{otherwise}
+\end{cases}
+\end{array}\]</span>
+<p>$$</p>
+<h3 id="对角线模式">对角线模式</h3>
+<p>MLAA
+中只有垂直和水平两个方向的边缘检测，SMAA引入了对角线方向的边缘检测。下图左边为MLAA的重矢量化线（蓝色），右边为SMAA的重矢量化线（蓝色）。</p>
+<p><img src="/images/spatial-anti-aliasing/smaa_diagnal.png" srcset="/img/loading.gif" lazyload /></p>
+<p>同样针对这些对角线模式，也引入了预计算的LUT纹理加速混合权重的计算。</p>
+<p><img src="/images/spatial-anti-aliasing/smaa_diagnal_lut.png" srcset="/img/loading.gif" lazyload /></p>
+<h3 id="精确边界搜索">精确边界搜索</h3>
+<p>MLAA利用的双线性滤波还不够完美，一次只能检测两个像素，且存在错失边界的可能，而SMAA通过在xy轴取不同的偏移，来达到一次检测4个像素的目的，且不会错失边界。</p>
+<p><img src="/images/spatial-anti-aliasing/smaa_search.png" srcset="/img/loading.gif" lazyload /></p>
+<p>上图以搜索水平边缘的左端点为例：</p>
+<ul>
+<li>左上：起始像素为灰点。</li>
+<li>右上：MLAA的采样点是橙色点，它只检测到橙色线标记的边，而SMAA的采样点是绿色，它还可能检测到绿色线标记的边。</li>
+<li>左下：MLAA采样的点和一次采样能检测到两个像素<span
+class="math inline">\(b_1,b_2\)</span>，以及最终会错失的端点（蓝色）。</li>
+<li>右下：SMAA采样的点和一次采样能检测到四个像素<span
+class="math inline">\(b_1,
+b_2,b_3,b_4\)</span>，最终所有可能的端点都会被检测到。</li>
+</ul>
+<h2 id="特点-1">特点</h2>
+<p>SMAA对几何边缘形态的处理非常精细，几乎达到了重建滤波器所能做到的极限，效果比FXAA要更好，很接近MSAA，但代价是3次PASS。此外，它也有滤波方案不可避免的问题：闪烁。</p>
+<h1 id="参考">参考</h1>
+<ol type="1">
+<li><a target="_blank" rel="noopener" href="http://iryoku.com/aacourse/">Filtering Approaches for
+Real-Time Anti-Aliasing</a></li>
+<li><a
+target="_blank" rel="noopener" href="http://www.cs.cmu.edu/afs/cs/academic/class/15869-f11/www/readings/reshetov09_mlaa.pdf">MLAA</a></li>
+<li><a
+target="_blank" rel="noopener" href="http://iryoku.com/aacourse/downloads/04-Jimenez&#39;s-MLAA-&amp;-SMAA-(Subpixel-Morphological-Anti-Aliasing).pdf">Jimenez's
+MLAA&amp;SMAA</a></li>
+<li><a
+target="_blank" rel="noopener" href="http://www.iryoku.com/smaa/downloads/SMAA-Enhanced-Subpixel-Morphological-Antialiasing.pdf">SMAA</a></li>
+<li><a
+target="_blank" rel="noopener" href="https://developer.download.nvidia.cn/assets/gamedev/files/sdk/11/FXAA_WhitePaper.pdf">FXAA
+WhitePaper</a></li>
+<li><a
+target="_blank" rel="noopener" href="https://catlikecoding.com/unity/tutorials/advanced-rendering/fxaa/">Advance-rendering
+FXAA</a></li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/Rendering/" class="category-chain-item">Rendering</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/Rendering/">#Rendering</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>实时渲染中的反走样：空域滤波抗锯齿</div>
+      <div>https://luxaviar.github.io/2022/06/05/spatial-anti-aliasing.html</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Luxaviar</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年6月5日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+                <a target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="NC - 非商业性使用">
+                    <i class="iconfont icon-nc"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/06/11/TAA.html" title="实时渲染中的反走样：TAA">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">实时渲染中的反走样：TAA</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/05/29/MSAA.html" title="实时渲染中的反走样：MSAA">
+                        <span class="hidden-mobile">实时渲染中的反走样：MSAA</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+  
+  
+
+
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="busuanzi_container_site_pv" style="display: none">
+        总访问量 
+        <span id="busuanzi_value_site_pv"></span>
+         次
+      </span>
+    
+    
+      <span id="busuanzi_container_site_uv" style="display: none">
+        总访客数 
+        <span id="busuanzi_value_site_uv"></span>
+         人
+      </span>
+    
+    
+  
+</div>
+
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  
+      <script>
+        if (!window.MathJax) {
+          window.MathJax = {
+            tex    : {
+              inlineMath: { '[+]': [['$', '$']] }
+            },
+            loader : {
+              load: ['ui/lazy']
+            },
+            options: {
+              renderActions: {
+                insertedScript: [200, () => {
+                  document.querySelectorAll('mjx-container').forEach(node => {
+                    let target = node.parentNode;
+                    if (target.nodeName.toLowerCase() === 'li') {
+                      target.parentNode.classList.add('has-jax');
+                    }
+                  });
+                }, '', false]
+              }
+            }
+          };
+        } else {
+          MathJax.startup.document.state(0);
+          MathJax.texReset();
+          MathJax.typeset();
+          MathJax.typesetPromise();
+        }
+
+        Fluid.events.registerRefreshCallback(function() {
+          if ('MathJax' in window && MathJax.startup.document && typeof MathJax.startup.document.state === 'function') {
+            MathJax.startup.document.state(0);
+            MathJax.texReset();
+            MathJax.typeset();
+            MathJax.typesetPromise();
+          }
+        });
+      </script>
+    
+
+  <script  src="https://lib.baomitu.com/mathjax/3.2.2/es5/tex-mml-chtml.js" ></script>
+
+  <script  src="/js/local-search.js" ></script>
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

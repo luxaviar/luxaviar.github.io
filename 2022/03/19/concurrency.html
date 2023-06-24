@@ -1,0 +1,1295 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/images/favicon-32x32.png">
+  <link rel="icon" href="/images/favicon-32x32.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Luxaviar">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="基础知识 处理器架构演进 Cache 现代处理器的时钟周期通常为0.5 ns，而访问主存的时间为50ns 或更长。因此，访问内存是非常昂贵的，超过100个时钟周期。为了获得良好的处理器性能，必须减少从内存中获取指令和访问数据的平均时间，缓存就是为了这个目的而存在，缓存小而快并集成在CPU内部，通常只需几个时钟周期就可以访问数十或数百千字节的大小。 从Latency Numbers Ev">
+<meta property="og:type" content="article">
+<meta property="og:title" content="并发编程漫谈">
+<meta property="og:url" content="https://luxaviar.github.io/2022/03/19/concurrency.html">
+<meta property="og:site_name" content="Luxaviar&#39;s Blog">
+<meta property="og:description" content="基础知识 处理器架构演进 Cache 现代处理器的时钟周期通常为0.5 ns，而访问主存的时间为50ns 或更长。因此，访问内存是非常昂贵的，超过100个时钟周期。为了获得良好的处理器性能，必须减少从内存中获取指令和访问数据的平均时间，缓存就是为了这个目的而存在，缓存小而快并集成在CPU内部，通常只需几个时钟周期就可以访问数十或数百千字节的大小。 从Latency Numbers Ev">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://luxaviar.github.io/images/concurrency/moores-law.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/concurrency/cache.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/concurrency/shared-memory.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/concurrency/MESI.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/concurrency/write-stall.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/concurrency/store-buffer.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/concurrency/invalidate-queue.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/concurrency/memory-ordering.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/concurrency/memory-model.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/concurrency/sequential-consistency.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/concurrency/total-store-order.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/concurrency/memory-barrier.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/concurrency/happens-before.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/concurrency/syncrhonized-with.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/concurrency/not-syncrhonized-with.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/concurrency/carry-a-dependency.png">
+<meta property="og:image" content="https://luxaviar.github.io/images/concurrency/lock-free.png">
+<meta property="article:published_time" content="2022-03-19T03:49:01.000Z">
+<meta property="article:modified_time" content="2023-06-24T11:13:25.573Z">
+<meta property="article:author" content="Luxaviar">
+<meta property="article:tag" content="C&#x2F;C++">
+<meta property="article:tag" content="Concurrency">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://luxaviar.github.io/images/concurrency/moores-law.png">
+  
+  
+    <meta name="referrer" content="no-referrer-when-downgrade">
+  
+  
+  <title>并发编程漫谈 - Luxaviar&#39;s Blog</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"luxaviar.github.io","root":"/","version":"1.9.4","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":false,"follow_dnt":true,"baidu":null,"google":"G-SLB35QMHKE","gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null,"path":"window.location.pathname","ignore_local":false}},"search_path":"/local-search.xml"};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+
+  
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 60vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Luxaviar&#39;s Blog</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="并发编程漫谈"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-03-19 11:49" pubdate>
+          2022年3月19日 中午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          20k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          170 分钟
+        
+      </span>
+    
+
+    
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">并发编程漫谈</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="基础知识">基础知识</h1>
+<h2 id="处理器架构演进">处理器架构演进</h2>
+<h3 id="cache">Cache</h3>
+<p>现代处理器的时钟周期通常为0.5 ns，而访问主存的时间为50ns
+或更长。因此，访问内存是非常昂贵的，超过100个时钟周期。为了获得良好的处理器性能，必须减少从内存中获取指令和访问数据的平均时间，缓存就是为了这个目的而存在，缓存小而快并集成在CPU内部，通常只需几个时钟周期就可以访问数十或数百千字节的大小。</p>
+<p>从<a target="_blank" rel="noopener" href="https://gist.github.com/hellerbarde/2843375">Latency
+Numbers Every Programmer Should
+Know</a>可以看出现今各级存储的延迟数据：</p>
+<figure class="highlight lasso"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs lasso">L1 <span class="hljs-keyword">cache</span> reference <span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span>. <span class="hljs-number">0.5</span> ns<br>Branch mispredict <span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span>. <span class="hljs-number">5</span> ns<br>L2 <span class="hljs-keyword">cache</span> reference <span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span> <span class="hljs-number">7</span> ns<br>Mutex lock/unlock <span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span> <span class="hljs-number">25</span> ns<br>Main memory reference <span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span>. <span class="hljs-number">100</span> ns             <br>Compress <span class="hljs-number">1</span>K <span class="hljs-built_in">bytes</span> <span class="hljs-keyword">with</span> Zippy <span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span>. <span class="hljs-number">3</span>,<span class="hljs-number">000</span> ns  =   <span class="hljs-number">3</span> µs<br>Send <span class="hljs-number">2</span>K <span class="hljs-built_in">bytes</span> over <span class="hljs-number">1</span> Gbps network <span class="hljs-params">...</span><span class="hljs-params">...</span>. <span class="hljs-number">20</span>,<span class="hljs-number">000</span> ns  =  <span class="hljs-number">20</span> µs<br>SSD random read <span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span> <span class="hljs-number">150</span>,<span class="hljs-number">000</span> ns  = <span class="hljs-number">150</span> µs<br>Read <span class="hljs-number">1</span> MB sequentially from memory <span class="hljs-params">...</span>.. <span class="hljs-number">250</span>,<span class="hljs-number">000</span> ns  = <span class="hljs-number">250</span> µs<br>Round trip within same datacenter <span class="hljs-params">...</span><span class="hljs-params">...</span> <span class="hljs-number">500</span>,<span class="hljs-number">000</span> ns  = <span class="hljs-number">0.5</span> ms<br>Read <span class="hljs-number">1</span> MB sequentially from SSD* <span class="hljs-params">...</span>.. <span class="hljs-number">1</span>,<span class="hljs-number">000</span>,<span class="hljs-number">000</span> ns  =   <span class="hljs-number">1</span> ms<br>Disk seek <span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span><span class="hljs-params">...</span> <span class="hljs-number">10</span>,<span class="hljs-number">000</span>,<span class="hljs-number">000</span> ns  =  <span class="hljs-number">10</span> ms<br>Read <span class="hljs-number">1</span> MB sequentially from disk <span class="hljs-params">...</span>. <span class="hljs-number">20</span>,<span class="hljs-number">000</span>,<span class="hljs-number">000</span> ns  =  <span class="hljs-number">20</span> ms<br>Send packet CA-&gt;Netherlands-&gt;CA <span class="hljs-params">...</span>. <span class="hljs-number">150</span>,<span class="hljs-number">000</span>,<span class="hljs-number">000</span> ns  = <span class="hljs-number">150</span> ms<br></code></pre></td></tr></table></figure>
+<p>如果L1
+Cache读取的延迟是0.5s的话，那么从主存读取的延迟是100s，SSD随机读取则要4.4小时。</p>
+<p>现代CPU一般都是多级缓存，这是出于速度/容量/成本的综合考虑，x86体系最早在486引入了两级缓存，从Pentium
+Pro开始，L2 Cache和CPU封装到了一起，接着AMD又引入了L3
+Cache。缓存对处理器性能有巨大的影响，没有缓存，让处理器时钟以千兆赫的频率运行毫无意义，很多时候处理器只是在等待内存访问完成。</p>
+<h3 id="多核处理器">多核处理器</h3>
+<p>在计算机发展的最初几十年里，基本只有单核处理器，随着摩尔定律，单核处理器的性能每两年就会翻一倍。然而最近十几年摩尔定律逐渐失效，单核处理器中晶体管数目增长放缓，性能遇到了瓶颈，硬件厂商转而通过封装多个核心来提升处理器的整体性能。</p>
+<figure>
+<img src="/images/concurrency/moores-law.png" srcset="/img/loading.gif" lazyload alt="Moore&#39;s Law" />
+<figcaption aria-hidden="true">Moore's Law</figcaption>
+</figure>
+<p>到如今，软件开发者面对的多核CPU基本都是对称多处理器（SMP：Symmetric
+Multi-Processor），多个核心处于同等地位，根据内存访问的不同可以分为：</p>
+<ol type="1">
+<li>一致存储器访问结构（UMA：Uniform Memory
+Access），访问共享的内存/资源，PC、手机等常见设备是这种架构，接下去的讨论也将围绕UMA架构。</li>
+<li>非一致性内存访问（NUMA：Non-Uniform Memory
+Access），由多个CPU模块组成，每个CPU模块又有多个CPU，虽然理论上内存也是共享的，但是有本地内存和远程内存的区别，常见于大型服务器。</li>
+</ol>
+<h2 id="指令重排">指令重排</h2>
+<p>为了更好地利用CPU，编译器和CPU都可能进行指令重排(<code>Instruction Reordering</code>)，这种底层优化行为在单核时代就存在了，但规则是：不管指令如何重排，都不能改变单线程程序的行为，因此这些优化对程序员来讲是透明的。</p>
+<p>到了多核时代，情况稍有变化，虽然遵守的规则依然不变：不管指令如何重排，都不能改变单核上运行的单线程程序的行为。但在多个核上运行的多线程代码的正确性，却没有这样的保证，程序员需要在某些时候对底层的指令重排有所感知，否则将写不出正确的多线程程序。</p>
+<h3 id="编译器重排">编译器重排</h3>
+<p>编译器优化包括：公共子表达式删除（Common Subexpression
+Elimination）、寄存器分配（Register Allocation）、常量折叠（Constant
+Folding）、指令调度（Instruction Scheduling）等等。</p>
+<p>可以使用显式的编译器屏障（<code>compiler barrier</code>）阻止编译器重排，比如：
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">int</span> A, B;<br><br><span class="hljs-type">void</span> <span class="hljs-title function_">foo</span><span class="hljs-params">()</span><br>&#123;<br>    A = B + <span class="hljs-number">1</span>;<br>    <span class="hljs-keyword">asm</span> <span class="hljs-title function_">volatile</span><span class="hljs-params">(<span class="hljs-string">&quot;&quot;</span> ::: <span class="hljs-string">&quot;memory&quot;</span>)</span>;<br>    B = <span class="hljs-number">0</span>;<br>&#125;<br></code></pre></td></tr></table></figure></p>
+<p><code>asm volatile("" ::: "memory")</code>只是简单的告诉编译器不要对前后的指令乱序，实际不会生成额外的汇编指令。但是它有一个副作用：编译器将刷新所有寄存器的值到内存，然后（在asm语句之后）重新读取内存中的值，并将它们重新加载到寄存器中，有点类似对所有变量添加了<code>volatile</code>的效果。为了避免这个副作用，可以通过内联汇编命令的input和output操作符明确指定哪些内存操作不能乱序，比如：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><code class="hljs c">WRITE(x)<br><span class="hljs-keyword">asm</span> <span class="hljs-title function_">volatile</span><span class="hljs-params">(<span class="hljs-string">&quot;&quot;</span>: <span class="hljs-string">&quot;=m&quot;</span>(y) : <span class="hljs-string">&quot;m&quot;</span>(x):)</span> <span class="hljs-comment">// memory fence</span><br><span class="hljs-title function_">READ</span><span class="hljs-params">(y)</span><br></code></pre></td></tr></table></figure>
+<p>中间的内联汇编告诉编译器插入一条指令（其实是空的），它可能会读x的内存，会写y的内存，因此编译器不会把这两个操作乱序。这种明确的<code>memory fence</code>的好处是：使编译器尽量少的对其他不相关的变量造成影响，避免了额外开销。</p>
+<p>除了显式的编译器屏障之外，还有隐式的编译器屏障。实际上，大多数的函数（非inline函数）不管它们自身是否包含<code>compiler barrier</code>，都可以充当<code>compiler barrier</code>。这是因为，编译器并不清楚函数的副作用，编译器必须要放弃那些对此函数可见的内存上的任何假设。</p>
+<p>顺便说一下，GCC提供了<code>__attribute__((pure))</code>来显式指定一个函数是纯的（无副作用）：该函数除了返回一些值之外，不会产生其他作用和影响；并且它的返回值只依赖于它的输入参数和一些全局变量，比如：
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">int</span> __attribute__((pure)) <span class="hljs-built_in">strlen</span>(<span class="hljs-type">char</span> *p) <br>&#123; <br><span class="hljs-comment">//…  </span><br>&#125;<br></code></pre></td></tr></table></figure>
+这类函数不会成为隐式的<code>compiler barrier</code>，编译器可以放开手脚进行优化。</p>
+<h3 id="cpu重排">CPU重排</h3>
+<p>对现代处理器来讲，为了提高流水线的运行效率，乱序执行(<code>Out-of-Order Execution)</code>是常见的优化手段：当前面的指令由于特种类型的功能单元不足、存储器延迟或操作数没有计算出来，必须停顿时，CPU可以发射后续的无关指令，从而乱序执行。这种做法有效的提高了CPU利用率，掩盖了各种停顿。</p>
+<p>对单处理器单线程程序而言，这些优化尽管可能会改变不同内存地址的访问顺序（<code>Memory Ordering</code>），但它们对程序员是透明的，看起来程序仍然是在顺序执行。而到了多处理器时代，这些优化对多线程程序正确性的影响变得不能被忽视了，必须要有一个规范来让程序员在必要时能够控制内存访问顺序，否则只能禁用这些优化，后果将是严重损害性能。</p>
+<p>为最大限度保留编译器和多处理器的优化能力，同时使多线程程序的执行结果是可预测的，系统需要程序员的帮助。最后就得到了一个折中方案，为了性能，硬件继续保留乱序优化的权利，但上层系统提供所谓内存一致性模型（<code>Memory Consistency Model</code>）的规范，程序员通过同步设施：内存屏障（<code>Memory Barrier</code>）和原子操作（<code>Atomic Operation</code>），来标记多个线程间的协作关系，使得系统的优化得以保留的同时，程序的正确性也不受影响。</p>
+<p>内存一致性模型和缓存一致性（<code>Cache Coherence</code>）关注的都是内存和Cache相关的存取操作的正确性问题，理论上它们是各自独立的，实现上却有着千丝万缕的联系，让我们先从Cache一致性模型入手。</p>
+<h1 id="cache一致性">Cache一致性</h1>
+<p>现代SMP的缓存一般分为三级，由每一个核心独享的L1、L2
+Cache，以及所有的核心共享L3 Cache组成：</p>
+<figure>
+<img src="/images/concurrency/cache.png" srcset="/img/loading.gif" lazyload alt="Cache" />
+<figcaption aria-hidden="true">Cache</figcaption>
+</figure>
+<p>Cache以固定大小的线性block缓存数据，称为<code>Cache Line</code>，CPU对Cache操作都是以某个<code>Cache Line</code>为目标，主流的<code>Cache Line</code>大小是64Bytes。</p>
+<p><code>Cache Line</code>中的数据是内存对应数据的一个拷贝，Cache一致性就是要保证一条条<code>Cache Line</code>和内存之间的数据一致性。对于当今的SMP，每个Core有自己私有的Cache，因此它还包括各个Core的Cache之间的一致性。不管怎样，Cache对程序是透明的，其最终结果就是，把内存+Cache看成一个抽象的共享内存，同一时刻，各Core在这个共享内存看到的数据都是一致的。从共享内存读取称为Load，将数据写入到共享内存称为Store。</p>
+<figure>
+<img src="/images/concurrency/shared-memory.png" srcset="/img/loading.gif" lazyload alt="shared memory" />
+<figcaption aria-hidden="true">shared memory</figcaption>
+</figure>
+<p>类似分布式系统中的数据一致性问题，我们也需要一个协议来实现Cache一致性，区别在于CPU的硬件设计保证了不会有网络断开的意外，而消息的延迟间隔也基本确定，因此Cache一致性协议只要维护数据的状态即可，比Paxos/Raft协议要简单很多。</p>
+<p>Cache一致性协议的通信机制一般来讲有两种：</p>
+<ul>
+<li><strong>Snooping</strong>
+采用广播的形式，当一个Core修改了<code>Cache Line</code>之后，将状态通过总线广播通知其他Core。各个Core收到通知后执行既定的动作以及修改<code>Cache Line</code>的状态。缺点是总线带宽压力比较大，核心数目不能太多。</li>
+<li><strong>Directory-based</strong>
+一个独立的存储单元，把所有Core的<code>Cache Line</code>的信息都记录下来，可以点对点精准投递协议消息，避免了广播带来的带宽压力。最坏情况下（所有共享数据被所有核共享），和Snooping的总线带宽消耗一样。缺点是Directory本身的维护开销，以及每次都要查一下Directory，增大了延迟。</li>
+</ul>
+<p>UMA一般是Snooping机制，NUMA系统中则一般是Directory-Based（否则就要模拟一个CPU总线了）。</p>
+<h2 id="mesi">MESI</h2>
+<p>最简单的Cache一致性协议是MESI协议。MESI分别是：<code>Modified</code>（已修改），<code>Exclusive</code>（独占），<code>Shared</code>（共享），<code>Invalid</code>（无效）的首字母，代表缓存的四种状态。</p>
+<ul>
+<li><strong>Modified</strong>
+处于该状态的<code>Cache Line</code>持有独占的一份数据，但是是脏的（已修改，和内存不一致），它将负责把数据写回内存或者传递给其他Core。</li>
+<li><strong>Exclusive</strong>
+类似于Modified，也是独占的，但是数据是干净的（未修改，和内存一致），该状态下Core可以直接修改数据（转变为Modified）。</li>
+<li><strong>Shared</strong>
+处于该状态表明数据被至少两个Core共享，并且是干净的，它可以随时变为Invalid状态。</li>
+<li><strong>Invalid</strong> 该Cache Line无效，可以随时被替换。</li>
+</ul>
+<p>MESI的状态机表示如下（<a
+target="_blank" rel="noopener" href="https://www.scss.tcd.ie/Jeremy.Jones/VivioJS/caches/MESIHelp.htm">这里</a>有一个可视化的演示）：</p>
+<figure>
+<img src="/images/concurrency/MESI.png" srcset="/img/loading.gif" lazyload alt="MESI" />
+<figcaption aria-hidden="true">MESI</figcaption>
+</figure>
+<p>允许的状态组合有5种：</p>
+<table>
+<thead>
+<tr class="header">
+<th></th>
+<th><strong>M</strong></th>
+<th><strong>E</strong></th>
+<th><strong>S</strong></th>
+<th><strong>I</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>M</strong></td>
+<td></td>
+<td></td>
+<td></td>
+<td>ok</td>
+</tr>
+<tr class="even">
+<td><strong>E</strong></td>
+<td></td>
+<td></td>
+<td></td>
+<td>ok</td>
+</tr>
+<tr class="odd">
+<td><strong>S</strong></td>
+<td></td>
+<td></td>
+<td>ok</td>
+<td>ok</td>
+</tr>
+<tr class="even">
+<td><strong>I</strong></td>
+<td>ok</td>
+<td>ok</td>
+<td>ok</td>
+<td>ok</td>
+</tr>
+</tbody>
+</table>
+<p>状态转换的规则有些复杂，从读写角度出发，大体可以归纳为以下两点：</p>
+<ol type="1">
+<li>当要修改（Store）数据时，如果是独占的，则本地修改即可；反之，如果是Shared，则需要标记其他共享Cache为Invalid，等待Invalid
+Ack之后才能进行修改；如果是Invalid，则要先Load最新的数据，同时也要修改其他共享Cache的状态为Invalid，然后再修改。</li>
+<li>当读取数据（Load）时，如果是独占或Shared，则本地读即可；反之，如果是Invalid，则会触发Cache
+Miss，从其他Cache或者内存加载数据。</li>
+</ol>
+<p>和分布式协议一样，为了提高性能和吞吐量，我们总是希望协议的消息请求和回应（通信量）能尽量少一些，同时优化某些频繁执行的操作，降低各种操作的延迟。</p>
+<p>对于Load，没有太多优化的余地，毕竟数据不能凭空捏造，只能老老实实地请求加载。对于Store，因为不论数据的最新副本在哪里，数据最终将以本地写的结果为准，这带来了优化的机会，Store有两个明显的延迟可以考虑优化掉：</p>
+<ol type="1">
+<li>发出Invalid到收到Invalid Ack之间的延迟。</li>
+<li>收到Invalid请求时，Cache可能正在执行其他操作（正在执行读写或者收到大量Invalid请求），不能马上给Cache做标记，导致响应Invalid
+Ack不及时，从而产生延迟。</li>
+</ol>
+<figure>
+<img src="/images/concurrency/write-stall.png" srcset="/img/loading.gif" lazyload alt="write stall" />
+<figcaption aria-hidden="true">write stall</figcaption>
+</figure>
+<p>对于第一个延迟，硬件工程师引入了<code>Store Buffer</code>，对于第二个延迟，引入了<code>Invalidate Queue</code>。</p>
+<h2 id="store-buffer">Store Buffer</h2>
+<p>以上图为例，从CPU0的视角来看，不论<code>Invalidate Ack</code>何时到来，它总是会修改数据成它想要的结果。因此，可以不必等待Invalid
+Ack回应，直接将结果写到一个本地写入队列（这就是所谓的<code>Store Buffer</code>），然后马上执行后续的指令。等待<code>Invalidate Ack</code>回应之后，再从<code>Store Buffer</code>刷新到Cache。本质上就是把一个同步阻塞（等待协议响应）操作，变成了一个异步非阻塞操作。</p>
+<figure>
+<img src="/images/concurrency/store-buffer.png" srcset="/img/loading.gif" lazyload alt="Store Buffer" />
+<figcaption aria-hidden="true">Store Buffer</figcaption>
+</figure>
+<p>顾名思义，<code>Store Buffer</code>只缓存Store操作，其大小只有几十个字节。
+由于<code>Store Buffer</code>是Cache之外的一层结构，这意味着同样的数据多了一个存放的地方，而且这个地方不受MESI协议的约束，因此有可能破坏<code>Cache Coherence</code>。</p>
+<p>首先，一个显而易见的问题是，<code>Store Buffer</code>既然存储了最新修改的数据，如果CPU依然从Cache读取数据，就有可能读到旧值。为此，CPU读取Cache时要先扫描一下<code>Store Buffer</code>，然后才是Cache，这就是所谓的<code>Store Forwarding</code>。</p>
+<p>另外一个问题涉及到多CPU的执行顺序问题，要更复杂一些，不同的硬件设计会有不同的表现。我们先假设不是所有的Store操作都会进入<code>Store Buffer</code>，比如，如果要写入的<code>Cache Line</code>是独占状态，那么Store操作可以绕过<code>Store Buffer</code>直接写入<code>Cache Line</code>，在此基础上考虑如下代码：
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs c"><span class="hljs-type">int</span> a = <span class="hljs-number">0</span>;<br><span class="hljs-type">int</span> b = <span class="hljs-number">0</span>;<br><br><span class="hljs-type">void</span> <span class="hljs-title function_">foo</span><span class="hljs-params">()</span><br>&#123;<br>  a = <span class="hljs-number">1</span>;   <br>  b = <span class="hljs-number">1</span>;  <br>&#125;<br><br><span class="hljs-type">void</span> <span class="hljs-title function_">bar</span><span class="hljs-params">()</span><br>&#123;   <br>  <span class="hljs-keyword">while</span> (b == <span class="hljs-number">0</span>) <span class="hljs-keyword">continue</span>;   <br>  assert(a == <span class="hljs-number">1</span>);  <br>&#125;<br></code></pre></td></tr></table></figure> 假设CPU0执行foo，CPU1执行bar，Cache状态如下：</p>
+<table>
+<thead>
+<tr class="header">
+<th></th>
+<th>a</th>
+<th>b</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>CPU0</td>
+<td>Shared</td>
+<td>Modified</td>
+</tr>
+<tr class="even">
+<td>CPU1</td>
+<td>Shared</td>
+<td>Invalid</td>
+</tr>
+</tbody>
+</table>
+<p>可能出现如下的执行顺序：</p>
+<ol type="1">
+<li>CPU1执行<code>while(b==0)</code>，由于CPU1的Cache没有b，发出Read
+b请求。</li>
+<li>CPU0执行<code>a=1</code>，写入数据到<code>Store Buffer</code>（但Cache里仍是0），并发起”Read
+Invalidate a“广播。</li>
+<li>CPU0执行<code>b=1</code>，因为b是Modified，直接写入Cache。</li>
+<li>CPU0收到CPU1的"Read b"请求，将Cache中的b返回给CPU1。</li>
+<li>CPU1从CPU0的Cache读到<code>b==1</code>，于是进入下一条assert语句。</li>
+<li>CPU1从本地的Cache读到<code>a==0</code>（因为CPU0的<code>Store Buffer</code>还未刷新到Cache），断言失败。</li>
+<li>CPU1收到“Invalidate a”的广播（已经晚了）。</li>
+</ol>
+<p>在这个例子里，虽然CPU0按照<code>a=1; b=1</code>的顺序执行，但在CPU1的视角下<code>b=1</code>发生在<code>a=1</code>之前，这就是所谓的<code>StoreStore</code>乱序。</p>
+<p>那么，假如所有的Store操作都必须放入<code>Store Buffer</code>会避免这个问题吗？答案是不一定，如果<code>Store Buffer</code>写入到Cache的顺序不是FIFO的，那么CPU1依然有可能会看到<code>StoreStore</code>乱序，反之如果保证FIFO，那么<code>StoreStore</code>乱序就不会发生。</p>
+<h2 id="invalidate-queue">Invalidate Queue</h2>
+<p>和Store类似，既然Cache都是要被Invalid的，那么早一点晚一点又有什么区别呢？因此CPU可以在没有真正Invalidate一个<code>Cache Line</code>之前先发送<code>Invalidate Ack</code>消息，只要将Invalidate的<code>Cache Line</code>信息暂存到<code>Invalidate Queue</code>。后续如果有对<code>Invalidate Queue</code>中涉及到的<code>Cache Line</code>操作，那就先将<code>Invalidate Queue</code>中的数据处理完毕即可，这不会影响Invalid操作的正确性。</p>
+<figure>
+<img src="/images/concurrency/invalidate-queue.png" srcset="/img/loading.gif" lazyload
+alt="Invalidate-queue" />
+<figcaption aria-hidden="true">Invalidate-queue</figcaption>
+</figure>
+<p>然而，和<code>Store Buffer</code>一样，<code>Invalidate Queue</code>也是Cache之外的结构，因此也有可能破坏<code>Cache Coherence</code>，同样以上面的代码为例，可能出现如下的执行顺序：</p>
+<ol type="1">
+<li>CPU0执行<code>a=1</code>，写入数据到<code>Store Buffer</code>（但Cache里仍是0），并发起”Read
+Invalidate a“广播。</li>
+<li>CPU0执行<code>b=1</code>，因为b是Modified，直接写入Cache。</li>
+<li>CPU1收到“Invalidate
+a“消息，但并不马上标记Cache为Invalid，而是先把消息暂存到<code>Invalidate Queue</code>，并回应“Invalidate
+Ack”。</li>
+<li>CPU1执行<code>while(b==0)</code>，由于CPU1的Cache没有b，发出Read
+b请求。</li>
+<li>CPU0收到“Invalidate
+Ack”，刷新<code>Store Buffer</code>到Cache，<code>a=1</code>在Cache中生效。</li>
+<li>CPU0收到CPU1的"Read b"请求，将Cache中的b返回给CPU1。</li>
+<li>CPU1从CPU0的Cache读到<code>b==1</code>，于是进入下一条assert语句。</li>
+<li>CPU1读取a的值，因为“Invalidate
+a“消息还在<code>Invalidate Queue</code>里面，CPU1本地的Cache还未被真正标记为Invalid（还是Shared），于是从本地Cache读到<code>a==0</code>，断言失败。</li>
+</ol>
+<p>和之前的例子一样，CPU1看到的依然是一个<code>StoreStore</code>乱序。</p>
+<p>可以看到，由于<code>Store Buffer</code>和<code>Invalidate Queue</code>的加入，使得MESI协议提供的一致性保证有点类似“最终一致性”，也就是某个时刻之后（<code>Store Buffer</code>刷新Cache了或者<code>Invalidate Queue</code>被处理完毕了）Cache的数据是一致的，但这中间多个数据读写的顺序、以及它们被看到的顺序没有提供任何保证，这些问题都属于内存一致性模型（<code>Memory Consistency Model</code>）的问题。</p>
+<h1 id="内存一致性模型">内存一致性模型</h1>
+<p><code>Memory Consistency Model</code>或者<code>Memory Model</code>是系统和程序员之间的规范，它规定了在一个多线程程序中的内存访问应该表现出怎样的行为。这个规范影响了系统的性能，因为它决定了多处理器/编译器能应用哪些优化；也影响了可编程性(<code>Programmability</code>)，因为多线程程序的正确性取决于<code>Memory Model</code>，从而约束了程序员的编程方式。</p>
+<p><code>Memory Model</code>的规范可以分为两层：</p>
+<ul>
+<li>硬件内存模型，由具体硬件规定和实现。</li>
+<li>软件内存模型，由高级语言标准给出统一的抽象模型，程序员面对这个模型编程即可，硬件实现差异由编译器或标准库抹平。</li>
+</ul>
+<p>先澄清一些概念：</p>
+<ol type="1">
+<li>显然单处理器单线程程序不需要考虑内存模型问题，虽然编译器/CPU都有可能加入乱序优化，但它们保证程序运行结果会和程序顺序（<code>Program Order</code>）一致。</li>
+<li>从实现层面讲，因为相同地址的读写存在数据相关性（<code>Data Dependence</code>），所以系统实际上只能对不同地址的读写进行乱序。因此<code>Memory Consistency</code>关注的是多个地址，而非单个地址。</li>
+</ol>
+<p>内存一致性模型主要规定不同地址上的读写操作在其他处理器看来会否乱序，以及一个写操作是否同时被其他处理器观察到，它包括<code>Instruction Reordering</code>和<code>Store Atomicity</code>。</p>
+<p><code>Memory Ordering</code>指的是一个CPU上针对不同地址的两个访存操作，在其他CPU看来是怎样的顺序。考虑到Load和Store，总共有4种常规的访存乱序组合，再加上一个依赖读取乱序：</p>
+<ul>
+<li>LoadLoad Order：不同地址上的读操作会否乱序</li>
+<li>LoadStore Order：读操作和不同地址上的写操作会否乱序</li>
+<li>StoreLoad Order：写操作和不同地址上的读操作会否乱序</li>
+<li>StoreStore Order：不同地址上的写操作会否乱序</li>
+<li>Dependent Loads
+Order：当第二条读操作的地址取决于前一条读操作的结果时，会否乱序。比如从内存中读取一个值，然后再用这个值进行一次读取，例如C++代码<code>ptr-&gt;field</code>（读取结构体指针ptr的field字段）。</li>
+</ul>
+<figure>
+<img src="/images/concurrency/memory-ordering.png" srcset="/img/loading.gif" lazyload
+alt="Memory Ordering" />
+<figcaption aria-hidden="true">Memory Ordering</figcaption>
+</figure>
+<p><code>Store Atomicity</code>是指，处理器的写操作是否同时被所有处理器看到。根据写操作的同时性，从弱到强排序：</p>
+<ol type="1">
+<li>Load Other's Store Early &amp;&amp;
+Non-Causality：允许写操作被自己及个别其他处理器先看到，不支持Causality。写序列可能以不同顺序被多个处理器观察到。</li>
+<li>Load Other's Store Early &amp;&amp;
+Causality：允许写操作被自己及个别其他处理器先看到，支持Causality。</li>
+<li>Load Own Store
+Early：只允许写操作被自己先看到。写序列以相同顺序被多个处理器观察到。</li>
+<li>Atomic Store：所有处理器同时看到写操作。</li>
+</ol>
+<p>这上面的每个属性按约束的强弱，又分为强一致性模型（<code>Strong Consistency Model</code>）和弱一致性模型（<code>Relaxed Consistency Model</code>），其中又有一些细分。</p>
+<figure>
+<img src="/images/concurrency/memory-model.png" srcset="/img/loading.gif" lazyload
+alt="Memory Model Hardware" />
+<figcaption aria-hidden="true">Memory Model Hardware</figcaption>
+</figure>
+<h2 id="strong-consistency-model">Strong Consistency Model</h2>
+<h3 id="sequential-consistency">Sequential Consistency</h3>
+<p>顺序一致性是最简单的内存模型，也是约束最强的一种模型，最开始是1979年由
+Leslie Lamport在<a
+target="_blank" rel="noopener" href="http://research.microsoft.com/en-us/um/people/lamport/pubs/multi.pdf">How
+to Make a Multiprocessor Computer That Correctly Executes Multiprocess
+Programs</a>定义的，Lamport定义SC要满足两个要求：</p>
+<div class="note note-info">
+            <ul><li>Requirement R1: Each processor issues memory requests in the orderspecified by its program.</li><li>Requirement R2: Memory requests from all processors issued to anindividual memory module are serviced from a single FIFO queue. Issuinga memory request consists of entering the request on this queue.</li></ul>
+          </div>
+<p>简单来讲就是：</p>
+<ol type="1">
+<li>每个处理器按照程序顺序（<code>Program Order</code>）发出内存请求。</li>
+<li>每个处理器执行的交错顺序可以是任意的，但是所有处理器所看见的程序整体执行顺序都是一样的（整个程序的视角），也就是有一个全局的Order（<code>Global Total Order</code>）。</li>
+</ol>
+<p>它完全不允许任何乱序的存在，对应的属性是：</p>
+<ul>
+<li>LL/LS/SL/SS/DL乱序：不允许</li>
+<li>Store Atomicity：Load Own Store Early</li>
+</ul>
+<p>实现上，可以抽象成多个处理器都按程序的指令顺序进行访存请求，而有一个Switch不停地随机选取下一个将要执行的处理器：</p>
+<figure>
+<img src="/images/concurrency/sequential-consistency.png" srcset="/img/loading.gif" lazyload
+alt="Sequential Consistency" />
+<figcaption aria-hidden="true">Sequential Consistency</figcaption>
+</figure>
+<p>这种模式等价于访存操作被串行化了，一次只能运行一条指令，无法发挥多核并行的好处。更糟糕的是，我们必须等到每条指令完成后才能启动下一条指令ーー在当前指令的效果对其他每个处理器都可见之前，不能再运行任何指令。如今很难找到一个硬件体系结构支持顺序一致性，因为它会严重限制硬件对CPU执行效率的优化(对寄存器/Cache/流水线的使用)。</p>
+<h3 id="total-store-order">Total Store Order</h3>
+<p>在SC的基础上，放开<code>StoreLoad</code>乱序，就是TSO模型。
+允许<code>StoreLoad</code>乱序带来了Store优化的可能性，可以简单地把它抽象成带写缓冲区(就是<code>Store Buffer</code>)的多处理器架构。</p>
+<figure>
+<img src="/images/concurrency/total-store-order.png" srcset="/img/loading.gif" lazyload alt="TSO" />
+<figcaption aria-hidden="true">TSO</figcaption>
+</figure>
+<p>所有处理器仍然连接到一个共享内存（Cache+内存的抽象），但是每个处理器都将对该内存的<code>Store</code>操作放入到本地写入队列。一个处理器上的内存读取在查询主内存之前会查询本地写队列（<code>Store Forwarding</code>），但它看不到其他处理器上的写队列。其效果就是当前处理器比其他处理器会先看到自己的写操作，<code>StoreLoad</code>乱序就发生在此刻：其他处理器从共享内存读到的值依然是旧的，直到写操作到达共享内存时，其他处理器上的读操作才能看到新值，因此在其他处理器看来就是Store跑到了Load之后。</p>
+<p>特别注意所有的<code>Store</code>操作都必须先放入这个队列，并且后续以FIFO的顺序写入Cache，因为<code>StoreStore</code>约束还在，这要求Store和Store之间是有序的。在这种约束条件下，所有处理器看到的<code>Store</code>顺序是全局一致的，因此它被命名为总存储定序或简称TSO——和SC的<code>Global Total Order</code>相比，它只保证了Store操作有一个全局的顺序。</p>
+<p>x86使用的正是一种TSO，但是有许多优化。然而在历史上，x86的设计并没有从一开始就显式地采用TSO，而是历经了不少波折。</p>
+<div class="note note-info">
+            <p>在20世纪90年代，第一批x86多处理器可用的手册几乎没有提到硬件提供的内存模型。第一个结果是2007年8月出版的<atarget="_blank" rel="noopener" href="http://www.cs.cmu.edu/~410-f10/doc/Intel_Reordering_318147.pdf">Intel64 Architecture Memory Ordering WhitePaper</a>，旨在为“软件作者提供对不同顺序的内存访问指令可能产生的结果的清晰理解”。同年晚些时候，AMD在<atarget="_blank" rel="noopener" href="https://courses.cs.washington.edu/courses/cse351/12wi/supp-docs/AMD%20Vol%201.pdf">AMD64Architecture Programmer's Manual revision3.14</a>中发布了类似的描述。这些描述基于一个被称为“总锁序+因果一致性”(TLO+CC)的模型，故意弱于TSO。在公开访谈中，英特尔架构师表示，TLO+CC<atarget="_blank" rel="noopener" href="http://web.archive.org/web/20080512021617/http://blogs.sun.com/dave/entry/java_memory_model_concerns_on">“像要求的那样强大，但并不足够强大。”</a>特别是，该模型保留了x86处理器在IRIWlitmustest中回答“是”的权利。不幸的是，内存屏障的定义不够强大，不足以重建顺序一致的内存语义，即使每个指令之后都有一个屏障。更糟糕的是，研究人员观察到实际的英特尔x86硬件违反了TLO+CC模型。</p><p>为了解决这些问题，欧文斯等人在<atarget="_blank" rel="noopener" href="https://research.swtch.com/sparcv8.pdf">早期SPARCv8TSO模型</a>的基础上提出了<atarget="_blank" rel="noopener" href="https://www.cl.cam.ac.uk/~pes20/weakmemory/x86tso-paper.tphols.pdf">x86-TSO模型提案</a>。当时，他们声称“据我们所知，x86-TSO是可靠的，足够强大，可以在上面编程，并且大致符合供应商的意图。“几个月后，英特尔和AMD发布了广泛采用这一模式的的新手册。</p><p>似乎所有英特尔处理器从一开始就实现了x86-TSO，尽管英特尔花了十年时间才决定致力于此。回想起来，很明显，英特尔和AMD的设计师们正在努力解决如何编写一个能够为未来处理器优化留出空间的内存模型，同时仍然为编译器作者和汇编语言程序设计者提供有用的保证。“有多强就有多强，但没有多强”是一个艰难的平衡动作。</p>
+          </div>
+<p>由于<code>Store Forwarding</code>的存在，x86在单核上实际提供了<code>Sequential Consistency</code>的保证。另外值得一提的是，x86没有<code>Invalidate Queue</code>，因此避免了<code>Invalidate Queue</code>带来的<code>StoreStore</code>乱序。</p>
+<h2 id="relaxed-consistency-model">Relaxed Consistency Model</h2>
+<h3 id="partial-store-order">Partial Store Order</h3>
+<p>在TSO的基础上，放开<code>StoreStore</code>乱序，这就是部分存储定序（PSO）模型。从实现上来讲，本质就是允许了<code>Non-FIFO</code>的<code>Store Buffer</code>的存在，这带来了另一个优化：多个Store操作可以合并或重叠执行。</p>
+<h3 id="weak-with-data-dependency-ordering">Weak With Data Dependency
+Ordering</h3>
+<p>在PSO的基础上，放开<code>LoadLoad</code>和<code>LoadStore</code>乱序，这就是ARM/PowerPC的内存模型。它允许常规的4种读写乱序，除了DL乱序。</p>
+<p>对于Arm/PowerPC来说，它同样也有<code>Store Buffer</code>，但是并不保证FIFO的写入，另外它可能还会有<code>Invalidate Queue</code>，可见它为自己留的优化余地比x86要大很多（很大可能是为了低功耗）。在这种内存模型下编程，要处处小心，除了存在数据依赖，控制依赖以及地址依赖等的前后指令不能被乱序之外，其余指令间都有可能存在乱序。</p>
+<h3 id="weak-memory-model">Weak Memory Model</h3>
+<p>完全放开所有<code>Memory Ordering</code>的乱序，也包括DL乱序。</p>
+<p>DEC
+Alpha是唯一一款允许<code>Dependent Loads</code>乱序的多处理器，这使得它有几乎最Weak的<code>Memory Model</code>，而这又促成了<code>Linux Kernel</code>的Barrier设计(<code>Data Dependency Barrier</code>)以及C++标准的<code>memory model</code>设计(<code>std::memory_order_consume</code>)，因为后者的目标是尽可能兼容所有的硬件。</p>
+<h1 id="memory-barrier">Memory Barrier</h1>
+<p>如前所述，各个CPU架构定义的内存模型规范中也提供了专门的设施用于手动控制<code>Memory Ordering</code>，从而保证并发程序的正确，这就是所谓的内存屏障（<code>Memory Barrier</code>）。顾名思义，内存屏障隔开了前后两部分指令，使得前/后指令无法跨越屏障调换（但是前/后内部的指令还是可以调换的）。另外，<code>Memory Barrier</code>在约束CPU行为的同时，也约束了编译器的行为，可以理解为<code>Memory Barrier</code>里隐含了<code>Compiler Barrier</code>的语义。</p>
+<p><img src="/images/concurrency/memory-barrier.png" srcset="/img/loading.gif" lazyload
+alt="Memory Barrier" />
+大多数CPU架构将内存屏障分为了读屏障(<code>Read Memory Barrier</code>)和写屏障(<code>Write Memory Barrier</code>):</p>
+<ul>
+<li>读屏障: 任何读屏障前的读操作都会先于读屏障后的读操作完成</li>
+<li>写屏障: 任何写屏障前的写操作都会先于写屏障后的写操作完成</li>
+<li>全屏障: 同时包含读屏障和写屏障的作用</li>
+</ul>
+<p>实际的CPU架构中，出于优化的目的，可能提供多种内存屏障，比如分为四种:</p>
+<ul>
+<li>LoadLoad: 相当于前面说的读屏障</li>
+<li>LoadStore: 任何该屏障前的读操作都会先于该屏障后的写操作完成</li>
+<li>StoreLoad: 任何该屏障前的写操作都会先于该屏障后的读操作完成</li>
+<li>StoreStore: 相当于前面说的写屏障</li>
+</ul>
+<p>实现上完全可以基于<code>Store Buffer</code>和<code>Invalidate Queue</code>来理解。比如：写屏障，等价于刷新本地<code>Store Buffer</code>保证屏障之前的Store指令对全局可见；读屏障，等价于清空本地的<code>Invalidate Queue</code>，保证之前的所有Load都已经生效。</p>
+<p>以x86为例，为了防止<code>StoreLoad</code>乱序，x86提供了<code>mfence</code>（全屏障）指令，作用是：</p>
+<ul>
+<li>保证<code>mfence</code>前后的Store和Load指令的顺序，防止<code>StoreLoad</code>乱序。</li>
+<li>保证了<code>mfence</code>之前的Store要先于之后的Store全局可见。</li>
+</ul>
+<p>理论上x86只存在<code>StoreLoad</code>乱序，<code>mfence</code>已经够用了，但它还提供了<code>sfence</code>和<code>lfence</code>:</p>
+<ul>
+<li>sfence（写屏障）保证<code>sfence</code>之前的Store要先于之后的Store对全局可见，防止Store重排序。</li>
+<li>lfence（读屏障）
+保证<code>lfence</code>之前的Load要先于之后的Load对全局可见，防止Load重排序。</li>
+</ul>
+<p>这里的吊诡之处在于，<code>sfence</code>和<code>lfence</code>在多核的<code>Memory Consistency</code>中基本等价于NOP，这两个指令基本只影响单核下的程序行为。<code>sfence</code>等价于清空<code>Store Buffer</code>，而<code>lfence</code>它序列化的不止是Load，而是<strong>所有的指令</strong>。<code>lfence</code>
+之前所有的指令执行完了之后才会被执行，同时，在<code>lfence</code>
+完成之前其后所有的指令也不能执行
+(预取是可以的)。具体细节比较复杂，总之<code>sfence/lfence</code>各自有一些特殊用法，但基本和多核的<code>Memory Consistency</code>无关。</p>
+<p>在x86里，除了显式的内存屏障指令，有些指令也会造成指令保序的效果，比如I/O操作的指令、exch等原子交换的指令，任何带有lock前缀的指令以及CPUID等指令都有内存屏障的作用，甚至有人发现，<code>lock addl</code>比<code>mfence</code>效率更高。</p>
+<h1 id="软件内存模型">软件内存模型</h1>
+<p>为了适应最广泛的硬件体系架构，软件的内存模型往往会基于一个<code>Relaxed Consistency</code>的处理器假设，通过编程语言和CPU提供的同步原语，保证多线程程序的执行结果和一个<code>Sequential Consistency</code>的程序一致。</p>
+<h2 id="data-race-free">Data Race Free</h2>
+<p>为了更好的理解软件内存模型，我们需要先了解一下DRF（<code>Data Race Free</code>）的概念，它是现在主流语言的内存模型的基础。它由Sarita
+Adve和Mark Hill在1990年的论文<a
+target="_blank" rel="noopener" href="https://ieeexplore.ieee.org/document/134502">Weak ordering-a new
+definition</a>提出，正如标题所言，她对之前的<code>Weak Ordering</code>进行了新的定义，他们把“弱有序”定义为如下：
+<div class="note note-info">
+            <p>Let a synchronization model be a set of constraints on memoryaccesses that specify how and when synchronization needs to be done.</p><p>同步模型是对内存访问的一组约束，这些约束指定了何时以及如何进行同步。</p>
+          </div></p>
+<p>他们首次提出使用<code>Explicit Synchronization Primitives</code>来同步线程，它的保证是，如果程序是<code>Data Race Free</code>的，那么即便在一个<code>Weak Ordering</code>内存模型上运行，也能保证与SC等价。这意味着，程序员在写程序时，能够按SC模型来推断程序的正确性，而程序在底层运行时，也能够享受弱一致性模型带来的种种优化措施。</p>
+<p>Adve和Hill提出了一种同步模型，他们称之为无数据竞争(Data-Race-Free，DRF)。<code>Data Race</code>的定义其实非常简单：<strong>两个对同一地址的非同步内存访问，其中至少有一个写入</strong>。而所谓<code>Data Race Free</code>，本质就是说凡是<code>Data Race</code>的变量，都必须用同步操作进行隔离，这种隔离为本来无序的多线程程序确定了顺序，包括：</p>
+<ol type="1">
+<li>同步操作之间的顺序</li>
+<li>同步操作之前的操作的顺序</li>
+<li>同步操作之后的操作的顺序</li>
+</ol>
+<p>确定了这三种顺序，就能保证程序在弱一致性模型下和SC执行结果一样。另外，
+值得注意的是2和3的操作内部的顺序其实是不确定的，这正是DRF留给弱一致性模型的优化空间，因为它们内部的执行顺序并不重要（需要同步的地方都被你同步到了），所以不影响程序逻辑的正确性。简单来讲，DRF的精髓就在于：只保证必要的顺序，不保证没必要的顺序。</p>
+<h2 id="c11内存模型">C++11内存模型</h2>
+<p>C++11提供的就是“Sequential Consistency for data race free
+programs”内存模型，即没有数据竞争（<code>Data Race Free</code>）的程序符合顺序一致性。也就是说我们只要对多线程之间需要同步的变量和操作，使用正确的同步原语（基于<code>Atomic Type</code>）进行同步，就能保证程序的执行符合顺序一致性。反过来，如果<code>Data Race</code>发生在非<code>Atomic Type</code>上，它就不仅不提供SC保证，而且还变成了一个未定义行为。</p>
+<p>在继续之前，我们还要了解一下如何描述程序操作（包括副作用）顺序的同步关系。首先是<code>synchronized-with</code>关系，简单理解就是，假设X是一个atomic变量，如果线程A写了变量X，线程B读了变量X，那么线程A、B间就建立起了<code>synchronized-with</code>关系。</p>
+<p>然后是<code>happens-before</code>关系，操作A
+<code>happens-before</code>
+操作B的关系要成立，需要满足以下任一条件：</p>
+<ol type="1">
+<li>A sequenced-before B（对单线程）</li>
+<li>A inter-thread happens before B（对多线程）</li>
+</ol>
+<p>其中，<code>sequenced-before</code>就是单线程下的顺序操作的关系，而<code>inter-thread happens-before</code>指的是：如果一个线程中的操作A
+<code>synchronized-with</code>另一个线程中的操作B, 那么 A
+<code>inter-thread happens-before</code> B。</p>
+<p><code>inter-thread happens-before</code> 关系具有传递性，将它与
+<code>sequenced-before</code> 关系结合，我们可以得到以下效果：如果
+A<code>sequenced-before</code> B，B
+<code>inter-thread happens-before</code> C，那么 A
+<code>inter-thread happens-before</code>
+C。这揭示了如果你在一个线程中对数据进行了一系列操作，那么你只需要一个
+<code>synchronized-with</code> 关系，即可使得数据对于另一个执行操作 C
+的线程可见。</p>
+<p>用一句话总结就是：我们可以通过<code>synchronized-with</code>建立起多线程之间的<code>happens-before</code>关系。
+实现<code>synchronizes-with</code>的方式有很多，包括但不限于<code>mutex lock</code>,
+<code>thread create/join</code>、<code>Aquire and release Semantic</code>。</p>
+<figure>
+<img src="/images/concurrency/happens-before.png" srcset="/img/loading.gif" lazyload
+alt="happens-before" />
+<figcaption aria-hidden="true">happens-before</figcaption>
+</figure>
+<p>C++以原子变量(<code>Atomic Variable</code>)或原子操作(<code>Atomic Operation</code>)的形式提供了建立<code>synchronized-with</code>关系的能力，从而允许程序同步其线程，C++提供了三种内存顺序模型：
+- Seqential Consistent Ordering（<code>memory_order_seq_cst</code>） -
+Relaxed Ordering（<code>memory_order_relaxed</code>)。 - Acquire-Release
+Ordering（<code>memory_order_consume</code>，<code>memory_order_acquire</code>，<code>memory_order_release</code>，<code>memory_order_acq_rel</code>）</p>
+<p><em>C++11还定义了原子栅栏作为原子变量的替代，但是并不太常用，也很容易用错。</em></p>
+<h3 id="sequential-consistent-ordering">sequential consistent
+ordering</h3>
+<p>对应<code>memory_order_seq_cst</code>：</p>
+<ul>
+<li>如果对于一个原子变量的操作都是顺序一致的，那么多线程程序的行为就像是这些操作都以一种交叉顺序被单线程程序执行。</li>
+<li>它意味着将程序看做是一个简单的序列，相对来说符合直觉，容易写出正确的程序，因此作为默认的内存序。代价是性能开销比较大。</li>
+</ul>
+<h3 id="relaxed-ordering">relaxed ordering</h3>
+<p>对应<code>memory_order_relaxed</code>：</p>
+<ul>
+<li>在原子变量上采用 <code>relaxed ordering</code> 的操作不参与
+<code>synchronized-with</code> 关系。</li>
+<li>在同一线程内对同一变量的操作仍保持<code>happens-before</code>关系，但这是单线程程序正确性的要求，与其他线程无关。</li>
+<li>在 <code>relaxed ordering</code>
+中唯一的要求是在同一线程中，对同一原子变量的访问不可以被重排（对不同的原子变量的访问依然存在重排的可能性，只要它不改变单线程程序的正确性）。</li>
+<li>没有附加同步的情况下，“对每个变量的修改次序”是唯一一件被多个线程共享的事。</li>
+</ul>
+<p>简单来讲，就是除了提供一个原子操作之外，完全不参与多线程同步。</p>
+<h3 id="acquire-release-ordering">acquire-release ordering</h3>
+<p>这是最常用的构建<code>syncrhonized-with</code>关系的内存顺序模型，对应<code>memory_order_release</code>，<code>memory_order_acquire</code>，<code>memory_order_acq_rel</code>：</p>
+<ul>
+<li>原子 load 操作是 acquire
+操作(<code>memory_order_acquire</code>)，原子 store 操作是
+release操作(<code>memory_order_release</code>)</li>
+<li>原子<code>read_modify_write</code>操作(如<code>fetch_add()</code>,
+<code>exchange()</code>)可以是 acquire, release
+或两者皆是(<code>memory_order_acq_rel</code>)。</li>
+</ul>
+<p>同步是成对出现的，每一个 acquire 对应一个 release(跨线程的)。
+对一个原子变量M的 release 操作A <code>syncrhonized-with</code>
+一个对原子变量M进行 acquire
+的操作B，结果就是B能够看到A之前（包括A）的所有操作的副作用。</p>
+<p><img src="/images/concurrency/syncrhonized-with.png" srcset="/img/loading.gif" lazyload /></p>
+<p>需要注意的是<code>syncrhonized-with</code>关系是在运行时建立起来的，它不是一个静态的关系，这意味着release有可能实际发生在acquire之后，此时两个线程就没有建立这种同步关系，因此我们必须推理相关操作之间所有可能发生的顺序，才能保证程序的正确性。</p>
+<p><img src="/images/concurrency/not-syncrhonized-with.png" srcset="/img/loading.gif" lazyload /></p>
+<h3 id="memory_order_consume">memory_order_consume</h3>
+<p><code>memory_order_consume</code> 是 <code>acquire-release</code>
+顺序模型中的一种，但它比较特殊，它引入了数据依赖关系（<code>data-dependent</code>）。简单来讲<code>acquire-release</code>对两个同步点前后的所有操作都生效，这个同步粒度有点太大了，在很多时候，线程间只想针对有依赖关系的操作进行同步，除此之外其他操作顺序如何无所谓。</p>
+<blockquote>
+<p>所谓数据依赖，在大多数情况下，它只是说，如果第一个计算的值用作第二个计算的操作数，那么一个计算将带有对另一个计算的依赖性（<code>carry-a-dependency</code>）。在源代码级别，依赖关系链是一系列表达式，它们的求值彼此之间都有一个依赖关系。</p>
+</blockquote>
+<p>这个优化利用了很多硬件的数据依赖性排序特性：数据依赖关系排序保证沿单个数据依赖链执行的所有内存访问将按顺序执行。Itanium、Intel
+x86、 x86-64、PA-RISC、SPARC和 zSeries
+都尊重指令级别的数据依赖关系排序，唯一已知的不保留数据依赖关系排序的弱序处理器是
+DEC Alpha。</p>
+<p>当你使用 consume
+语义时，你基本上是在尝试让编译器利用这些处理器家族的数据依赖排序特性，也就是利用数据依赖关系排序来避免插入内存障碍的开销。除此以外，你还必须确保在源代码级别上的确存在数据依赖关系链。</p>
+<p><img src="/images/concurrency/carry-a-dependency.png" srcset="/img/loading.gif" lazyload /></p>
+<p>虽然C++提供了<code>memory_order_consume</code>，但现实有点惨淡，因为编译器很难分析源代码的数据依赖关系，然后输出一个高效的能够免除内存屏障开销的机器指令序列，所以目前所有的编译器都只是把<code>memory_order_consume</code>当做<code>memory_order_acquire</code>来实现。</p>
+<h1 id="解惑">解惑</h1>
+<h2 id="volatile">volatile</h2>
+<p>C/C++中的volatile常常被人错误使用，很多人错误地以为它和Java中的volatile一样，其实不然：</p>
+<ol type="1">
+<li>它不提供任何的防止乱序的功能。</li>
+<li>它不提供跨线程同步功能。</li>
+<li>它甚至不保证是原子的。</li>
+</ol>
+<p>volatile修饰的变量只是表示该变量可以被某些编译器未知的因素更改，比如：操作系统、硬件或者其它线程等。遇到这个关键字声明的变量，编译器对访问该变量的代码就不再进行优化，从而可以提供对特殊地址的稳定访问。当使用
+volatile 声明的变量的值的时候，系统总是重新从它所在的内存读取数据。</p>
+<p>简而言之，编译器优化的前提是编译器完全掌握变量读写的全息图景，但volatile告诉编译器：有些事你不了解，编译器的全息拼图少了一块，于是不敢轻举妄动。</p>
+<p>按照这个<a
+target="_blank" rel="noopener" href="http://web.archive.org/web/20180120044239/http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n2016.html">总结</a>，<code>volatile</code>
+只在三种场合下是合适的。</p>
+<ul>
+<li>和信号处理（<code>signal handler</code>）相关的场合；</li>
+<li>和内存映射硬件（<code>memory mapped hardware</code>）相关的场合；</li>
+<li>和非本地跳转（<code>setjmp</code> 和
+<code>longjmp</code>）相关的场合。</li>
+</ul>
+<h2 id="lock-free">lock-free</h2>
+<p><code>lock-free</code>考察的是若干个线程组成的系统，能够确保执行它的所有线程中至少有一个能够继续往下执行（make
+progress），这样的系统或者算法实现就是<code>lock-free</code>的。实现上，使用基于原子操作（如RMW、CAS等）的同步方案解决资源争用的问题，而不使用mutex这种会造成显式阻塞的锁，因此所谓的无锁，本质上只是锁的粒度变小了。</p>
+<p><code>wait-free</code>就更强一点，它是指任意线程的任何操作都可以在有限步之内结束，而不用关心其它线程。所有<code>wait-free</code>的算法都是<code>lock-free</code>的，理论上<code>wait-free</code>是性能最好的，很多算法理论上都可以是<code>wait-free</code>的，但实现难度也是最大的。</p>
+<p>和<code>lock-free</code>相对的就是<code>lock-based</code>，这里的锁指的就是OS的mutex、semaphore等同步设施。当一个线程到达临界区时，可能另外一个线程已经持有访问该共享数据的锁，从而不能获取锁资源而阻塞（进入内核的一个等待队列），直到争用的锁被释放（再被内核唤醒），因此属于阻塞型同步（<code>Blocking Synchronization</code>）。</p>
+<p>与之相对的，<code>lock-free</code>和<code>wait-free</code>属于非阻塞型同步（
+<code>Non-blocking Synchronization</code>）。如果使用了锁，那么OS可能把一个刚获得锁的线程切换出去，这时候所有依赖这个锁的线程都在等待，而没做有用的事，所以用了锁就不可能是<code>lock-free</code>，更不会是<code>wait-free</code>。</p>
+<figure>
+<img src="/images/concurrency/lock-free.png" srcset="/img/loading.gif" lazyload alt="lock-free" />
+<figcaption aria-hidden="true">lock-free</figcaption>
+</figure>
+<p><code>lock-based</code>因为是阻塞式的锁，因此经常和性能低下联系到一起；而<code>lock-free</code>或<code>wait-free</code>的算法因为没用阻塞锁，经常和高性能联系到一起，但事实可能相反，因为：</p>
+<ul>
+<li><code>lock-free</code>和<code>wait-free</code>必须处理更多更复杂的<code>race condition</code>和<code>ABA problem</code>，完成相同目的的代码比用锁更复杂。代码越多，耗时就越长。</li>
+<li>使用mutex的算法变相带后退（backoff）效果：出现竞争时尝试另一个途径以临时避免竞争，mutex出现竞争时会使调用者睡眠，使拿到锁的那个线程可以很快地独占完成一系列流程，总体吞吐可能反而高了。</li>
+</ul>
+<p>mutex导致低性能往往是因为使用不当，比如临界区过大（限制了并发度），或竞争过于激烈（上下文切换开销变得突出）。事实上，现在的mutex实现一般都很高效了，比如基于futex（<code>fast userspace mutex</code>）实现的mutex，在锁空闲时，直接就在用户态返回，即便锁被占用，也会在用户态尝试一段时间，最终才会陷入内核。如无特殊必要，直接用mutex一般来讲并不会拖慢整体执行速度。</p>
+<p><code>lock-free</code>/<code>wait-free</code>算法的价值在于其保证了一个或所有线程始终在做有用的事，而不是绝对的高性能。但在一种情况下<code>lock-free</code>和<code>wait-free</code>算法的性能多半更高：那就是算法本身可以用少量原子指令实现。实现锁也是要用原子指令的，当算法本身用一两条指令就能完成的时候，相比额外用锁肯定是更快了。</p>
+<h2 id="cache-1">cache</h2>
+<h3 id="cache-line-ping-pong">cache-line-ping-pong</h3>
+<p>当某个<code>Cache Line</code>在多个Core之间传递时（也就是快速地在Invalid和独占状态之间反复横跳），这种现象称为<code>cache-line-ping-pong</code>，它会带来性能的严重下降（极端情况下比单个线程执行时的性能更差）。</p>
+<p>引发这个问题的原因在于有一个共享资源被多个Core频繁读写，比如：</p>
+<ol type="1">
+<li>core1从内存中加载<code>Cache Line</code>进行操作。</li>
+<li>core2也要对这个数据操作，于是它也加载了这个<code>Cache Line</code>，同时让core1的<code>Cache Line</code>失效。</li>
+<li>core1又需要处理这个数据，于是重新从内存中加载这个<code>Cache Line</code>，并导致core2的<code>Cache Line</code>再次失效。</li>
+<li>1-3一直反复下去。</li>
+</ol>
+<p>解决办法当然是能不共享资源就不共享资源，实在不行，尽量让资源的争用程度降低，比如减小临界区的大小，降低争用的频率，甚至拆分共享资源。</p>
+<h3 id="false-sharing">false sharing</h3>
+<p><code>cache-line-ping-ponging</code>有一个特例叫<code>false sharing</code>，指的是虽然看起来多线程之间没有共享资源，只是各自读写不同的数据，但因为这些数据被映射到相同的<code>Cache Line</code>，导致了事实上的<code>cache-line-ping-ponging</code>。</p>
+<p>解决办法就是加padding，隔开一个<code>Cache Line</code>的大小，避免两个变量放入同一个<code>Cache Line</code>，比如：
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-meta">#<span class="hljs-keyword">define</span> CACHE_LINE_SIZE 64</span><br><br><span class="hljs-keyword">struct</span> <span class="hljs-title class_">RingBuffer</span> &#123;<br>	<span class="hljs-comment">//...</span><br>	std::atomic&lt;<span class="hljs-type">uint32_t</span>&gt; head_ = <span class="hljs-number">0</span>;<br>	<span class="hljs-type">uint8_t</span> padding_[CACHE_LINE_SIZE];<br>	std::atomic&lt;<span class="hljs-type">uint32_t</span>&gt; tail_ = <span class="hljs-number">0</span>;<br>&#125;<br></code></pre></td></tr></table></figure></p>
+<h3 id="locality">locality</h3>
+<p>由于内存比处理器慢得多，缓存命中率对整体性能至关重要，为此CPU都自带缓存预取技术：每次加载数据到Cache时，总是尽量从当前位置开始多加载一些数据到Cache。理由是，数据访问是在时间和空间上聚集发生的，同一时间和同一位置前后的数据很可能具有比较大的关联性，或者说程序在短时间内只会频繁访问一些局部的数据，这就是所谓的局部性原理(locality)。</p>
+<p>从这个原理出发，我们就知道哪些数据结构是缓存友好的，哪些是不友好的。显然最友好的是数组，就是一段连续内存；而链表、树、哈希表等，访问时内部有很多指针跳转，都对缓存不太友好。</p>
+<p>游戏引擎中ECS架构的流行，很大程度就是因为它对Cache友好，同时有利于多线程并行，从而带来更高的运行性能。</p>
+<h1 id="参考">参考</h1>
+<p>特别推荐<a
+target="_blank" rel="noopener" href="https://preshing.com/">preshing</a>写的并发编程相关文章，写的深入浅出通俗易懂。</p>
+<ol type="1">
+<li><a
+target="_blank" rel="noopener" href="https://assets.bitbashing.io/papers/concurrency-primer.pdf">What
+every systems programmer should know about concurrency</a></li>
+<li><a
+target="_blank" rel="noopener" href="https://preshing.com/20140709/the-purpose-of-memory_order_consume-in-cpp11/">The
+Purpose of memory_order_consume in C++11</a></li>
+<li><a
+target="_blank" rel="noopener" href="https://preshing.com/20120930/weak-vs-strong-memory-models/">Weak
+vs. Strong Memory Models</a></li>
+<li><a
+target="_blank" rel="noopener" href="http://gavinchou.github.io/summary/c++/memory-ordering/">memory
+ordering</a></li>
+<li><a
+target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Symmetric_multiprocessing">Symmetric
+multiprocessing</a></li>
+<li><a
+target="_blank" rel="noopener" href="https://github.com/GHScan/TechNotes/blob/master/2017/Memory_Model.md">Memory
+Model: 从多处理器到高级语言</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.zhihu.com/question/24301047">如何理解 C++11
+的六种 memory order</a></li>
+<li><a
+target="_blank" rel="noopener" href="https://book.douban.com/subject/3901836/">多处理器编程的艺术</a></li>
+<li><a target="_blank" rel="noopener" href="https://book.douban.com/subject/4130141/">C++ Concurrency
+In Action</a></li>
+<li><a
+target="_blank" rel="noopener" href="http://concurrencyfreaks.blogspot.com/2013/05/lock-free-and-wait-free-definition-and.html">Lock-Free
+and Wait-Free, definition and examples</a></li>
+</ol>
+
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/Programming/" class="category-chain-item">Programming</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/C-C/">#C/C++</a>
+      
+        <a href="/tags/Concurrency/">#Concurrency</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>并发编程漫谈</div>
+      <div>https://luxaviar.github.io/2022/03/19/concurrency.html</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Luxaviar</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年3月19日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-by"></i>
+                  </span>
+                </a>
+              
+                <a target="_blank" href="https://creativecommons.org/licenses/by-nc/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="NC - 非商业性使用">
+                    <i class="iconfont icon-nc"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/04/03/collision-detection.html" title="刚体物理引擎实现之碰撞检测">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">刚体物理引擎实现之碰撞检测</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2021/10/24/matrix-major-order.html" title="矩阵的主序">
+                        <span class="hidden-mobile">矩阵的主序</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+  
+  
+
+
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="busuanzi_container_site_pv" style="display: none">
+        总访问量 
+        <span id="busuanzi_value_site_pv"></span>
+         次
+      </span>
+    
+    
+      <span id="busuanzi_container_site_uv" style="display: none">
+        总访客数 
+        <span id="busuanzi_value_site_uv"></span>
+         人
+      </span>
+    
+    
+  
+</div>
+
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.18.2/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  
+      <script>
+        if (!window.MathJax) {
+          window.MathJax = {
+            tex    : {
+              inlineMath: { '[+]': [['$', '$']] }
+            },
+            loader : {
+              load: ['ui/lazy']
+            },
+            options: {
+              renderActions: {
+                insertedScript: [200, () => {
+                  document.querySelectorAll('mjx-container').forEach(node => {
+                    let target = node.parentNode;
+                    if (target.nodeName.toLowerCase() === 'li') {
+                      target.parentNode.classList.add('has-jax');
+                    }
+                  });
+                }, '', false]
+              }
+            }
+          };
+        } else {
+          MathJax.startup.document.state(0);
+          MathJax.texReset();
+          MathJax.typeset();
+          MathJax.typesetPromise();
+        }
+
+        Fluid.events.registerRefreshCallback(function() {
+          if ('MathJax' in window && MathJax.startup.document && typeof MathJax.startup.document.state === 'function') {
+            MathJax.startup.document.state(0);
+            MathJax.texReset();
+            MathJax.typeset();
+            MathJax.typesetPromise();
+          }
+        });
+      </script>
+    
+
+  <script  src="https://lib.baomitu.com/mathjax/3.2.2/es5/tex-mml-chtml.js" ></script>
+
+  <script  src="/js/local-search.js" ></script>
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
